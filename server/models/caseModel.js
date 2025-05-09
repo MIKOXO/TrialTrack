@@ -9,10 +9,14 @@ const caseSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  defendant: {
+    name: { type: String, required: true },
+    email: String,
+  },
   status: {
     type: String,
-    enum: ["open", "in-progress", "closed"],
-    default: "open",
+    enum: ["Open", "In-progress", "Closed"],
+    default: "Open",
   },
   createdAt: {
     type: Date,

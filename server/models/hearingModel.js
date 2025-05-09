@@ -14,6 +14,7 @@ const hearingSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  notes: { type: String },
   court: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Court",
