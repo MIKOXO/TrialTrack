@@ -1,4 +1,5 @@
 import Case from "../models/caseModel.js";
+import Court from "../models/courtModel.js";
 import Hearing from "../models/hearingModel.js";
 import asyncHandler from "express-async-handler";
 
@@ -9,6 +10,12 @@ const createHearing = asyncHandler(async (req, res) => {
   try {
     const { caseId } = req.params;
     const { date, location, notes } = req.body;
+
+    // Court Validation
+    const foundCourt = await Court.findById(court);
+    if (!foundCourt) {
+      return res.status(404).json({ error: "Court not found" });
+    }
 
     // Verify Judge role
     if (req.user.role !== "Judge") {
@@ -35,6 +42,7 @@ const createHearing = asyncHandler(async (req, res) => {
       date,
       location,
       notes,
+      court: foundCourt._id,
       createdBy: req.user.id,
     });
 
@@ -57,6 +65,12 @@ const updateHearing = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const { date, location, notes } = req.body;
+
+    // Court Validation
+    const foundCourt = await Court.findById(court);
+    if (!foundCourt) {
+      return res.status(404).json({ error: "Court not found" });
+    }
 
     // Verify Judge role
     if (req.user.role !== "Judge") {

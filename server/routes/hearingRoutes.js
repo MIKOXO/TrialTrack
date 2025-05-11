@@ -7,6 +7,7 @@ import {
 
 const router = express.Router();
 
+//  Routes
 router.post(
   "/create/:caseId",
   authMiddleware,

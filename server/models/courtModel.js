@@ -12,7 +12,6 @@ const courtSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ["District", "High", "Supreme"],
-    required: true,
   },
   judges: [
     {
@@ -20,6 +19,10 @@ const courtSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
+  capacity: {
+    type: Number,
+    default: 0,
+  },
 });
 
 const Court = mongoose.model("Court", courtSchema);
