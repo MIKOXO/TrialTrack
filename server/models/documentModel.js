@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const documentSchema = new mongoose.Schema({
-  title: {
+  name: {
     type: String,
     required: true,
   },
@@ -9,7 +9,7 @@ const documentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Case",
   },
-  uploader: {
+  uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
@@ -18,10 +18,6 @@ const documentSchema = new mongoose.Schema({
     enum: ["Evidence", "Report", "Form", "Other"],
   },
   fileUrl: String,
-  type: {
-    type: String,
-    enum: ["Evidence", "Report", "Form", "Other"],
-  },
 });
 
 const Document = mongoose.model("Document", documentSchema);
