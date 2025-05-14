@@ -4,3 +4,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.links {
+  @apply cursor-pointer font-medium font-Lexend font-light hover:text-tertiary text-secondary hover:ease-in-out duration-500;
+}
+
+.links2 {
+  @apply cursor-pointer font-medium font-Lexend font-light hover:text-tertiary text-primary hover:ease-in-out duration-500;
+}

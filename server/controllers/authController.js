@@ -4,8 +4,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 // Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const token = (id) => {
+  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
@@ -42,11 +42,14 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (user) {
     res.status(201).json({
-      _id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      token: generateToken(user._id),
+      token,
+      user: {
+        _id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        // token: token(user._id),
+      },
     });
   } else {
     res.status(400);
@@ -58,17 +61,27 @@ const registerUser = asyncHandler(async (req, res) => {
 // @route   POST api/auth/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   // Check for user email
   const user = await User.findOne({ email });
 
+  if (user.role !== role) {
+    return res
+      .status(403)
+      .json({ error: `You are not registered as a ${role}` });
+  }
+
   if (user && (await bcrypt.compare(password, user.password))) {
     res.json({
-      _id: user.id,
-      username: user.username,
-      email: user.email,
-      token: generateToken(user._id),
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        // token: token(user._id),
+      },
     });
   } else {
     return res.status(400).send({ error: "Invalid Credentials" });
@@ -160,7 +173,7 @@ const deleteUserProfile = asyncHandler(async (req, res) => {
 // });
 
 export {
-  generateToken,
+  token,
   registerUser,
   loginUser,
   logoutUser,
