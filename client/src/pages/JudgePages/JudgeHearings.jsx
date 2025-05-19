@@ -1,7 +1,7 @@
 import React from "react";
 import JudgeLayout from "../../components/JudgeLayout";
 
-const JudgeSettings = () => {
+const JudgeHearings = () => {
   return (
     <section>
       <div>
@@ -11,4 +11,4 @@ const JudgeSettings = () => {
   );
 };
 
-export default JudgeSettings;
+export default JudgeHearings;

@@ -1,6 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { FaUser, FaUserCog, FaGavel } from "react-icons/fa";
 import Logo from "../components/Logo";
 

@@ -19,6 +19,7 @@ export default {
       boxShadow: {
         500: "0px 4px 8px #00AD0E, 0px -2px 16px #00AD0E",
         400: "0px 2px 2px #00AD0E, 0px 1px 6px #00AD0E",
+        300: "1px 2px 2px #00AD0E, 1px 2px 2px #00AD0E",
       },
     },
   },

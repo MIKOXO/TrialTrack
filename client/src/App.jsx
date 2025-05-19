@@ -6,7 +6,6 @@ import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminHome from "./pages/AdminPages/AdminHome";
 import AdminCases from "./pages/AdminPages/AdminCases";
-import AdminClients from "./pages/AdminPages/AdminClients";
 import AdminCalendar from "./pages/AdminPages/AdminCalendar";
 import AdminReports from "./pages/AdminPages/AdminReports";
 import AdminSettings from "./pages/AdminPages/AdminSettings";
@@ -18,6 +17,11 @@ import JudgeHome from "./pages/JudgePages/JudgeHome";
 import JudgeCases from "./pages/JudgePages/JudgeCases";
 import JudgeCalendar from "./pages/JudgePages/JudgeCalendar";
 import JudgeSettings from "./pages/JudgePages/JudgeSettings";
+import ClientCalendar from "./pages/ClientPages/ClientCalendar";
+import JudgeHearings from "./pages/JudgePages/JudgeHearings";
+import AdminUsers from "./pages/AdminPages/AdminUsers";
+import NewCaseParties from "./pages/ClientPages/NewCaseParties";
+import NewCaseDocuments from "./pages/ClientPages/NewCaseDocuments";
 
 const App = () => {
   return (
@@ -32,7 +36,7 @@ const App = () => {
         <Route element={<ProtectedRoute role="Admin" />}>
           <Route path="/admin/home" element={<AdminHome />} />
           <Route path="/admin/cases" element={<AdminCases />} />
-          <Route path="/admin/clients" element={<AdminClients />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
@@ -43,6 +47,12 @@ const App = () => {
           <Route path="/client/home" element={<ClientHome />} />
           <Route path="/client/mycases" element={<MyCases />} />
           <Route path="/client/newcase" element={<NewCase />} />
+          <Route path="/client/calendar" element={<ClientCalendar />} />
+          <Route path="/client/newcase/parties" element={<NewCaseParties />} />
+          <Route
+            path="/client/newcase/documents"
+            element={<NewCaseDocuments />}
+          />
           <Route path="/client/settings" element={<ClientSettings />} />
         </Route>
 
@@ -50,6 +60,7 @@ const App = () => {
         <Route element={<ProtectedRoute role="Judge" />}>
           <Route path="/judge/home" element={<JudgeHome />} />
           <Route path="/judge/cases" element={<JudgeCases />} />
+          <Route path="/judge/hearings" element={<JudgeHearings />} />
           <Route path="/judge/calendar" element={<JudgeCalendar />} />
           <Route path="/judge/settings" element={<JudgeSettings />} />
         </Route>

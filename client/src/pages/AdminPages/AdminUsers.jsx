@@ -1,7 +1,7 @@
 import React from "react";
 import AdminLayout from "../../components/AdminLayout";
 
-const AdminReports = () => {
+const AdminUsers = () => {
   return (
     <section>
       <div>
@@ -11,4 +11,4 @@ const AdminReports = () => {
   );
 };
 
-export default AdminReports;
+export default AdminUsers;

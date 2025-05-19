@@ -1,7 +1,14 @@
 import React from "react";
+import AdminLayout from "../../components/AdminLayout";
 
 const AdminSettings = () => {
-  return <div>AdminSettings</div>;
+  return (
+    <section>
+      <div>
+        <AdminLayout />
+      </div>
+    </section>
+  );
 };
 
 export default AdminSettings;

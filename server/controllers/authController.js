@@ -4,10 +4,14 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 // Generate JWT Token
-const token = (id) => {
-  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-    expiresIn: "30d",
-  });
+const generateToken = (user) => {
+  return jwt.sign(
+    { id: user._id || user.id, role: user.role },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "30d",
+    }
+  );
 };
 
 // @desc    Register user
@@ -41,6 +45,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
+    const token = generateToken(user);
     res.status(201).json({
       token,
       user: {
@@ -73,6 +78,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (user && (await bcrypt.compare(password, user.password))) {
+    const token = generateToken(user);
     res.json({
       token,
       user: {
@@ -173,7 +179,7 @@ const deleteUserProfile = asyncHandler(async (req, res) => {
 // });
 
 export {
-  token,
+  generateToken,
   registerUser,
   loginUser,
   logoutUser,

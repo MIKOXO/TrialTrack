@@ -12,7 +12,7 @@ const createHearing = asyncHandler(async (req, res) => {
     const { date, location, notes } = req.body;
 
     // Court Validation
-    const foundCourt = await Court.findById(court);
+    const foundCourt = await Court.findById(courtId);
     if (!foundCourt) {
       return res.status(404).json({ error: "Court not found" });
     }
@@ -44,6 +44,7 @@ const createHearing = asyncHandler(async (req, res) => {
       notes,
       court: foundCourt._id,
       createdBy: req.user.id,
+      judge: req.user.id,
     });
 
     await hearing.save();

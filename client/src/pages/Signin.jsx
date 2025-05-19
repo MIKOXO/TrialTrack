@@ -28,7 +28,6 @@ const Signin = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
     setServerError("");
-    // setRole(e.target.value);
   };
 
   const validate = () => {

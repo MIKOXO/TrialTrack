@@ -1,7 +1,14 @@
 import React from "react";
+import JudgeLayout from "../../components/JudgeLayout";
 
 const JudgeCalendar = () => {
-  return <div>JudgeCalendar</div>;
+  return (
+    <section>
+      <div>
+        <JudgeLayout />
+      </div>
+    </section>
+  );
 };
 
 export default JudgeCalendar;
