@@ -98,25 +98,6 @@ const Signin = () => {
 
       <div className="font-Lexend mt-10 mx-auto w-full max-w-lg">
         <form action="" onSubmit={handleSubmit}>
-          {/* {!role && (
-            <div>
-              <label className="block mb-1 font-medium text-gray-700">
-                Select Role
-              </label>
-              <select
-                style={{ appearance: "none" 
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full border rounded-md px-6 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value=""> Select Role</option>
-                <option value="Admin">Admin</option>
-                <option value="Client">Client</option>
-                <option value="Judge">Judge</option>
-              </select>
-            </div>
-          )} */}
-
           <div className="relative my-6">
             <input
               type="email"

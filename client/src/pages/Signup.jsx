@@ -238,7 +238,7 @@ const Signup = () => {
               value={form.role}
               onChange={handleChange}
               style={{ appearance: "none" }}
-              className={`text-gray-400 w-full border rounded-md px-5 py-3 focus:outline-none focus:ring-1 ${
+              className={`text-gray-500 w-full border rounded-md px-5 py-3 focus:outline-none focus:ring-1 ${
                 errors.role
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"

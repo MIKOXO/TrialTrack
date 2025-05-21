@@ -144,7 +144,7 @@ const ClientSettings = () => {
           </p>
         </div>
 
-        <div className="mx-7 mb-5 py-3 bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="mx-7 mb-5 py-3 bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-2 flex border-b mb-6 mx-5 w-[330px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
             <button
               className={`py-3 px-8 text-center font-medium transition-all  ${

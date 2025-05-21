@@ -3,7 +3,7 @@ import JudgeSidebar from "./JudgeSidebar";
 import { FaBars, FaTimes } from "react-icons/fa";
 import AdminSidebar from "./AdminSidebar";
 
-const AdminLayout = () => {
+const AdminLayout = ({children}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [user, setUser] = useState(null);
 
@@ -33,7 +33,7 @@ const AdminLayout = () => {
         <AdminSidebar />
       </div>
 
-      <div className="font-Lexend flex-1 ml-0 md:ml-64 transition-all duration-300">
+      <div className="overflow-auto font-Lexend flex-1 ml-0 md:ml-64 transition-all duration-300">
         {/* Header */}
         <header className="bg-white shadow-sm p-4 flex justify-between items-end">
           <div></div>
@@ -52,6 +52,9 @@ const AdminLayout = () => {
             </div>
           </div>
         </header>
+
+        {/* Main Content */}
+        <main className="p-6">{children}</main>
       </div>
     </section>
   );
