@@ -25,6 +25,11 @@ const hearingSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  court: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Court",
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

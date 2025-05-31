@@ -2,13 +2,18 @@ import asyncHandler from "express-async-handler";
 import Notification from "../models/notificationModel.js";
 
 // @desc    Send Notification
-// @route   POST api/notification/send
+// @route   POST api/notifications/send
 // @access  Private
 const sendNotification = asyncHandler(async (req, res) => {
-  const { userId, title, message } = req.body;
+  const { userId, title, message, type } = req.body;
 
   try {
-    const notification = new Notification({ user: userId, title, message });
+    const notification = new Notification({
+      user: userId,
+      title,
+      message,
+      type: type || "general",
+    });
     await notification.save();
 
     res.status(201).json(notification);
@@ -18,7 +23,7 @@ const sendNotification = asyncHandler(async (req, res) => {
 });
 
 // @desc    Get Notifications
-// @route   GET api/notification/getNotifications
+// @route   GET api/notifications/getNotifications
 // @access  Private
 const getMyNotifications = asyncHandler(async (req, res) => {
   try {
@@ -35,7 +40,7 @@ const getMyNotifications = asyncHandler(async (req, res) => {
 });
 
 // @desc    Mark Notifications as read
-// @route   GET api/notification/read
+// @route   PUT api/notifications/read/:id
 // @access  Private
 const markAsRead = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -48,7 +53,7 @@ const markAsRead = asyncHandler(async (req, res) => {
     if (notification.user.toString() !== req.user.id)
       return res.status(403).json({ error: "Unauthorized" });
 
-    notification.isRead = true;
+    notification.read = true;
     await notification.save();
 
     res.json(notification);

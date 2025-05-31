@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Case from "../models/caseModel.js";
+import Notification from "../models/notificationModel.js";
 
 // @desc    File a new case
 // @route   POST api/case/file
@@ -9,35 +10,139 @@ const fileCase = asyncHandler(async (req, res) => {
     return res.status(403).json({ error: "Only clients can file cases" });
   }
 
-  const { title, description, defendant } = req.body;
-
-  if (!defendant || !defendant.name) {
-    return res.status(400).json({ error: "Defendant information is required" });
-  }
-
-  const courtCase = new Case({
+  const {
     title,
     description,
     defendant,
-    client: req.user.id,
-    status: "open",
-  });
+    plaintiff,
+    caseType,
+    court,
+    reportDate,
+    evidence,
+    // Phase 1 - Essential Fields
+    priority,
+    urgencyReason,
+    representation,
+    reliefSought,
+    compliance,
+  } = req.body;
 
-  await courtCase.save();
+  // Validate required fields
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: "Case title is required" });
+  }
 
-  if (courtCase) {
-    res.status(201).json({
-      _id: courtCase._id,
-      title: courtCase.title,
-      description: courtCase.description,
-      status: courtCase.status,
-      createdAt: courtCase.createdAt,
+  if (!description || !description.trim()) {
+    return res.status(400).json({ error: "Case description is required" });
+  }
+
+  if (!defendant || !defendant.name || !defendant.name.trim()) {
+    return res.status(400).json({ error: "Defendant information is required" });
+  }
+
+  // Validate compliance fields (required for legal filing)
+  if (!compliance || !compliance.verificationStatement) {
+    return res
+      .status(400)
+      .json({ error: "Verification statement is required" });
+  }
+
+  if (!compliance.perjuryAcknowledgment) {
+    return res
+      .status(400)
+      .json({ error: "Perjury acknowledgment is required" });
+  }
+
+  if (!compliance.courtRulesAcknowledgment) {
+    return res
+      .status(400)
+      .json({ error: "Court rules acknowledgment is required" });
+  }
+
+  try {
+    const courtCase = new Case({
+      title: title.trim(),
+      description: description.trim(),
+      defendant: {
+        name: defendant.name.trim(),
+        email: defendant.email || "",
+        phone: defendant.phone || "",
+        address: defendant.address || "",
+      },
+      plaintiff:
+        plaintiff && plaintiff.name
+          ? {
+              name: plaintiff.name.trim(),
+              email: plaintiff.email || "",
+              phone: plaintiff.phone || "",
+              address: plaintiff.address || "",
+            }
+          : undefined,
+      caseType: caseType || "",
+      court: court || "",
+      reportDate: reportDate || null,
+      evidence: evidence || "",
+      // Phase 1 - Essential Fields
+      priority: priority || "Medium",
+      urgencyReason: urgencyReason || "",
+      representation: representation || {
+        hasLawyer: false,
+        selfRepresented: true,
+      },
+      reliefSought: reliefSought || {},
+      compliance: {
+        verificationStatement: compliance.verificationStatement,
+        perjuryAcknowledgment: compliance.perjuryAcknowledgment,
+        courtRulesAcknowledgment: compliance.courtRulesAcknowledgment,
+        signatureDate: new Date(),
+        electronicSignature:
+          compliance.electronicSignature || req.user.username,
+      },
       client: req.user.id,
-      defendant: courtCase.defendant,
+      status: "Open", // Fixed: Use capitalized status to match schema enum
     });
-  } else {
-    res.status(400);
-    throw new Error("Case filing failed");
+
+    const savedCase = await courtCase.save();
+
+    // Create notification for successful case filing
+    try {
+      await Notification.create({
+        user: req.user.id,
+        title: "Case Filed Successfully",
+        message: `Your case "${savedCase.title}" has been filed successfully and is now under review.`,
+        type: "case_update",
+      });
+    } catch (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Don't fail the case filing if notification fails
+    }
+
+    res.status(201).json({
+      _id: savedCase._id,
+      title: savedCase.title,
+      description: savedCase.description,
+      status: savedCase.status,
+      caseType: savedCase.caseType,
+      court: savedCase.court,
+      reportDate: savedCase.reportDate,
+      createdAt: savedCase.createdAt,
+      client: req.user.id,
+      defendant: savedCase.defendant,
+      plaintiff: savedCase.plaintiff,
+      evidence: savedCase.evidence,
+      priority: savedCase.priority,
+      urgencyReason: savedCase.urgencyReason,
+      representation: savedCase.representation,
+      reliefSought: savedCase.reliefSought,
+      compliance: savedCase.compliance,
+      message: "Case filed successfully",
+    });
+  } catch (error) {
+    console.error("Error filing case:", error);
+    res.status(400).json({
+      error: "Case filing failed",
+      details: error.message,
+    });
   }
 });
 
@@ -53,14 +158,44 @@ const assignCase = asyncHandler(async (req, res) => {
     const { caseId } = req.params;
     const { judgeId } = req.body;
 
+    // First, find the case to check its status
+    const existingCase = await Case.findById(caseId);
+    if (!existingCase) {
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    // Check if case is closed
+    if (existingCase.status === "Closed") {
+      return res.status(400).json({
+        error: "Cannot assign judge to closed case",
+        details: `Case "${existingCase.title}" is closed and cannot be assigned to a judge. Only open or in-progress cases can be assigned to judges.`,
+      });
+    }
+
     const updatedCase = await Case.findByIdAndUpdate(
       caseId,
       { judge: judgeId },
       { new: true }
-    ).populate("client judge court");
+    ).populate("client judge courtRef");
 
     if (!updatedCase) {
-      res.status(404).json({ error: "Case not found" });
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    // Create notification for case assignment
+    try {
+      await Notification.create({
+        user: updatedCase.client._id,
+        title: "Judge Assigned to Your Case",
+        message: `Judge ${updatedCase.judge.username} has been assigned to your case "${updatedCase.title}". Your case will now be reviewed.`,
+        type: "case_update",
+      });
+    } catch (notificationError) {
+      console.error(
+        "Error creating assignment notification:",
+        notificationError
+      );
+      // Don't fail the assignment if notification fails
     }
 
     res.status(200).json(updatedCase);
@@ -75,7 +210,7 @@ const assignCase = asyncHandler(async (req, res) => {
 const getCaseById = asyncHandler(async (req, res) => {
   try {
     const courtCase = await Case.findById(req.params.id).populate(
-      "client judge court documents hearings reports"
+      "client judge courtRef documents hearings reports"
     );
 
     if (!courtCase) return res.status(404).json({ error: "Case not found" });
@@ -101,15 +236,20 @@ const getCaseById = asyncHandler(async (req, res) => {
 // @access  Private
 const getCases = asyncHandler(async (req, res) => {
   try {
-    // const filter = {};
+    const filter = {};
 
-    // if (req.user.role === "Client") {
-    //   filter.client = req.user.id;
-    // } else if (req.user.role === "Judge") {
-    //   filter.judge = req.user.id;
-    // }
+    // Filter cases based on user role
+    if (req.user.role === "Client") {
+      filter.client = req.user.id;
+    } else if (req.user.role === "Judge") {
+      filter.judge = req.user.id;
+    }
+    // Admin can see all cases, so no filter needed
 
-    const cases = await Case.find();
+    const cases = await Case.find(filter)
+      .populate("client", "username email")
+      .populate("judge", "username email")
+      .populate("courtRef", "name location");
 
     res.json(cases);
   } catch (err) {
@@ -157,6 +297,14 @@ const updateCaseStatus = asyncHandler(async (req, res) => {
       return res.status(404).json({ error: "Case not found" });
     }
 
+    // Check if case is already closed
+    if (courtCase.status === "Closed") {
+      return res.status(400).json({
+        error: "Cannot change status of closed case",
+        details: `Case "${courtCase.title}" is closed and its status cannot be changed. Closed cases are final and cannot be reopened.`,
+      });
+    }
+
     // Authorization: Only Admin or assigned Judge can update status
     const isAdmin = req.user.role === "Admin";
     const isAssignedJudge =
@@ -172,6 +320,37 @@ const updateCaseStatus = asyncHandler(async (req, res) => {
 
     courtCase.status = status;
     await courtCase.save();
+
+    // Create notification for case status update
+    try {
+      let notificationMessage = "";
+      let notificationType = "case_update";
+
+      switch (status) {
+        case "In Progress":
+          notificationMessage = `Your case "${courtCase.title}" is now in progress. A judge has been assigned and will review your case.`;
+          break;
+        case "Closed":
+          notificationMessage = `Your case "${courtCase.title}" has been closed. Please check the case details for the final decision.`;
+          notificationType = "case_closed";
+          break;
+        default:
+          notificationMessage = `Your case "${courtCase.title}" status has been updated to ${status}.`;
+      }
+
+      await Notification.create({
+        user: courtCase.client._id,
+        title: "Case Status Updated",
+        message: notificationMessage,
+        type: notificationType,
+      });
+    } catch (notificationError) {
+      console.error(
+        "Error creating status update notification:",
+        notificationError
+      );
+      // Don't fail the status update if notification fails
+    }
 
     res.json({ message: "Case status updated successfully", case: courtCase });
   } catch (err) {

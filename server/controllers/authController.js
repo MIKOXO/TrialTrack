@@ -2,6 +2,8 @@ import asyncHandler from "express-async-handler";
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import fs from "fs";
+import path from "path";
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -53,7 +55,6 @@ const registerUser = asyncHandler(async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        // token: token(user._id),
       },
     });
   } else {
@@ -71,13 +72,17 @@ const loginUser = asyncHandler(async (req, res) => {
   // Check for user email
   const user = await User.findOne({ email });
 
+  if (!user) {
+    return res.status(400).send({ error: "Invalid Credentials" });
+  }
+
   if (user.role !== role) {
     return res
       .status(403)
       .json({ error: `You are not registered as a ${role}` });
   }
 
-  if (user && (await bcrypt.compare(password, user.password))) {
+  if (await bcrypt.compare(password, user.password)) {
     const token = generateToken(user);
     res.json({
       token,
@@ -134,23 +139,117 @@ const getUsers = asyncHandler(async (req, res) => {
 const updateUserProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const allowedFields = ["username", "email"];
-  const updates = {};
-  for (const field of allowedFields) {
-    if (req.body[field] !== undefined) {
-      updates[field] = req.body[field];
+  try {
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Check if user is updating their own profile or is an admin
+    if (req.user.id !== id && req.user.role !== "Admin") {
+      return res.status(403).json({ error: "Access denied" });
     }
+
+    const allowedFields = [
+      "username",
+      "email",
+      "firstName",
+      "lastName",
+      "phone",
+      "profilePicture",
+    ];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    // Handle password change
+    if (req.body.newPassword) {
+      if (!req.body.currentPassword) {
+        return res
+          .status(400)
+          .json({ error: "Current password is required to change password" });
+      }
+
+      const isCurrentPasswordValid = await bcrypt.compare(
+        req.body.currentPassword,
+        user.password
+      );
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ error: "Current password is incorrect" });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(req.body.newPassword, salt);
+    }
+
+    updates.updatedAt = new Date();
+
+    const updatedUser = await User.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
+});
 
-  const updatedUser = await User.findByIdAndUpdate(id, updates, {
-    new: true,
-    runValidators: true,
-  });
+// @desc    Upload profile picture
+// @route   POST api/auth/upload-profile-picture/:id
+// @access  Private
+const uploadProfilePicture = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-  if (!updatedUser) return res.status(404).json({ error: "User not found" });
+  try {
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-  res.json(updatedUser);
-  res.status(400).json({ error: err.message });
+    // Check if user is updating their own profile or is an admin
+    if (req.user.id !== id && req.user.role !== "Admin") {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Delete old profile picture if it exists
+    if (user.profilePicture) {
+      const oldImagePath = path.join(
+        process.cwd(),
+        "uploads",
+        user.profilePicture
+      );
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // Update user with new profile picture path
+    const profilePicturePath = req.file.filename;
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        profilePicture: profilePicturePath,
+        updatedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({
+      message: "Profile picture uploaded successfully",
+      user: updatedUser,
+      profilePictureUrl: `/uploads/${profilePicturePath}`,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // @desc    Delete user profile
@@ -184,7 +283,7 @@ export {
   logoutUser,
   getMe,
   updateUserProfile,
+  uploadProfilePicture,
   deleteUserProfile,
   getUsers,
-  // selectRole,
 };

@@ -12,10 +12,67 @@ const caseSchema = new mongoose.Schema({
   defendant: {
     name: { type: String, required: true },
     email: String,
+    phone: String,
+    address: String,
+  },
+  plaintiff: {
+    name: String,
+    email: String,
+    phone: String,
+    address: String,
+  },
+  caseType: {
+    type: String,
+    enum: ["civil", "criminal", "family", "traffic", "smallClaims", "other"],
+  },
+  court: {
+    type: String,
+    enum: ["district", "high", "supreme", "family", "traffic"],
+  },
+  reportDate: {
+    type: Date,
+  },
+  evidence: {
+    type: String,
+  },
+  // Phase 1 - Essential Fields
+  priority: {
+    type: String,
+    enum: ["Low", "Medium", "High", "Urgent"],
+    default: "Medium",
+  },
+  urgencyReason: {
+    type: String,
+  },
+  representation: {
+    hasLawyer: { type: Boolean, default: false },
+    lawyerName: String,
+    lawyerBarNumber: String,
+    lawyerContact: {
+      email: String,
+      phone: String,
+      address: String,
+    },
+    selfRepresented: { type: Boolean, default: true },
+  },
+  reliefSought: {
+    monetaryDamages: { type: Boolean, default: false },
+    injunctiveRelief: { type: Boolean, default: false },
+    declaratoryJudgment: { type: Boolean, default: false },
+    specificPerformance: { type: Boolean, default: false },
+    other: String,
+    detailedRequest: String,
+  },
+  compliance: {
+    verificationStatement: { type: Boolean, required: true },
+    perjuryAcknowledgment: { type: Boolean, required: true },
+    courtRulesAcknowledgment: { type: Boolean, required: true },
+    signatureDate: { type: Date, default: Date.now },
+    electronicSignature: String,
   },
   status: {
     type: String,
-    enum: ["Open", "In-progress", "Closed"],
+    enum: ["Open", "In Progress", "Closed"],
     default: "Open",
   },
   createdAt: {
@@ -31,7 +88,7 @@ const caseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
-  court: {
+  courtRef: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Court",
   },

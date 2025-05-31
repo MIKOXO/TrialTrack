@@ -3,11 +3,23 @@ import { authMiddleware, restrictTo } from "../middleware/authMiddleware.js";
 import {
   createHearing,
   updateHearing,
+  getHearings,
+  getHearingById,
+  deleteHearing,
+  getAvailableTimeSlots,
 } from "../controllers/hearingController.js";
 
 const router = express.Router();
 
 //  Routes
+router.get("/", authMiddleware, restrictTo("Judge"), getHearings);
+router.get(
+  "/available-slots/:courtId/:date",
+  authMiddleware,
+  restrictTo("Judge"),
+  getAvailableTimeSlots
+);
+router.get("/:id", authMiddleware, getHearingById);
 router.post(
   "/create/:caseId",
   authMiddleware,
@@ -15,5 +27,6 @@ router.post(
   createHearing
 );
 router.put("/update/:id", authMiddleware, restrictTo("Judge"), updateHearing);
+router.delete("/:id", authMiddleware, restrictTo("Judge"), deleteHearing);
 
 export default router;
