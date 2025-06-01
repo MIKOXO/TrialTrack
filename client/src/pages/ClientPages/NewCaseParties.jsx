@@ -92,7 +92,7 @@ const NewCaseParties = () => {
     }
 
     // Navigate to the next step (documents)
-    navigate("/client/newcase/documents", { state: { formData } });
+    navigate("/client/newcase/legal-details", { state: { formData } });
   };
 
   return (
@@ -136,6 +136,16 @@ const NewCaseParties = () => {
                   : "border-transparent text-gray-500"
               }`}
               disabled={currentStep < 3}
+            >
+              Legal Details
+            </button>
+            <button
+              className={`flex-1 py-3 px-4 text-center ${
+                currentStep === 4
+                  ? "bg-white rounded-lg text-green-600 font-medium"
+                  : "border-transparent text-gray-500"
+              }`}
+              disabled={currentStep < 4}
             >
               Documents and review
             </button>

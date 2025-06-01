@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
 import ClientLayout from "../../components/ClientLayout";
 import CaseStatusCard from "../../components/CaseStatusCard";
@@ -12,49 +13,82 @@ const ClientHome = () => {
   const [user, setUser] = useState(null);
 
   const [stats, setStats] = useState({
-    totalCases: 5,
-    openCases: 2,
-    pendingCases: 1,
-    closedCases: 2,
+    totalCases: 0,
+    openCases: 0,
+    pendingCases: 0,
+    closedCases: 0,
   });
 
-  const [recentCases, setRecentCases] = useState([
-    {
-      id: 1,
-      title: "Tenant Dispute - Africa road",
-      caseNumber: "CV-2023-1001",
-      description:
-        "Dispute regarding rental property damages and security deposit.",
-      status: "Active",
-      filedDate: "8/15/2023",
-    },
-    {
-      id: 2,
-      title: "Traffic Violation Appeal",
-      caseNumber: "CR-2022-8434",
-      description: "Appeal of speeding ticket issued on Piassa Road",
-      status: "Pending",
-      filedDate: "11/20/2022",
-    },
-  ]);
+  const [recentCases, setRecentCases] = useState([]);
+  const [upcomingHearings, setUpcomingHearings] = useState([]);
 
-  const [upcomingHearings, setUpcomingHearings] = useState([
-    {
-      id: 1,
-      title: "Traffic Violation Appeal",
-      date: "Wednesday, November 15, 2023",
-    },
-    {
-      id: 2,
-      title: "Tenant Dispute - Africa Road",
-      date: "Monday, November 20, 2023",
-    },
-    {
-      id: 3,
-      title: "Divorce Proceedings",
-      date: "Sunday, December 10, 2023",
-    },
-  ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        // Fetch cases for the client
+        const casesResponse = await axios.get(
+          "http://localhost:3001/api/case",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const cases = casesResponse.data;
+
+        // Calculate stats from real data
+        const totalCases = cases.length;
+        const openCases = cases.filter((c) => c.status === "Open").length;
+        const inProgressCases = cases.filter(
+          (c) => c.status === "In-progress"
+        ).length;
+        const closedCases = cases.filter((c) => c.status === "Closed").length;
+
+        setStats({
+          totalCases,
+          openCases,
+          pendingCases: inProgressCases, // Map "In-progress" to "pending" for UI
+          closedCases,
+        });
+
+        // Get recent cases (last 2 cases)
+        const recentCasesData = cases
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 2)
+          .map((caseItem) => ({
+            id: caseItem._id,
+            title: caseItem.title,
+            caseNumber: caseItem._id.slice(-8).toUpperCase(), // Use last 8 chars of ID as case number
+            description: caseItem.description,
+            status:
+              caseItem.status === "In-progress" ? "Pending" : caseItem.status,
+            filedDate: new Date(caseItem.createdAt).toLocaleDateString(),
+          }));
+
+        setRecentCases(recentCasesData);
+
+        setUpcomingHearings([]);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -95,16 +129,22 @@ const ClientHome = () => {
               </Link>
             </div>
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              {recentCases.map((caseItem) => (
-                <CaseItem
-                  key={caseItem.id}
-                  title={caseItem.title}
-                  caseNumber={caseItem.caseNumber}
-                  description={caseItem.description}
-                  status={caseItem.status}
-                  filedDate={caseItem.filedDate}
-                />
-              ))}
+              {recentCases.length > 0 ? (
+                recentCases.map((caseItem) => (
+                  <CaseItem
+                    key={caseItem.id}
+                    title={caseItem.title}
+                    caseNumber={caseItem.caseNumber}
+                    description={caseItem.description}
+                    status={caseItem.status}
+                    filedDate={caseItem.filedDate}
+                  />
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  <p>No cases found. File your first case to get started!</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -132,13 +172,19 @@ const ClientHome = () => {
         <div>
           <h2 className="text-lg font-medium mb-4">Upcoming Hearings</h2>
           <div className="space-y-7 bg-white rounded-lg shadow-lg overflow-hidden">
-            {upcomingHearings.map((hearing) => (
-              <HearingItem
-                key={hearing.id}
-                title={hearing.title}
-                date={hearing.date}
-              />
-            ))}
+            {upcomingHearings.length > 0 ? (
+              upcomingHearings.map((hearing) => (
+                <HearingItem
+                  key={hearing.id}
+                  title={hearing.title}
+                  date={hearing.date}
+                />
+              ))
+            ) : (
+              <div className="p-6 text-center text-gray-500">
+                <p>No upcoming hearings scheduled.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

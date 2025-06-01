@@ -2,39 +2,11 @@
 import { useState, useEffect } from "react";
 import ClientLayout from "../../components/ClientLayout";
 import { Link } from "react-router-dom";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaEye, FaFile } from "react-icons/fa";
+import { casesAPI } from "../../services/api";
 
 const MyCases = () => {
-  const [cases, setCases] = useState([
-    {
-      id: "C-2025-089",
-      title: "Tenant Dispute",
-      type: "Civil",
-      status: "Active",
-      filingDate: "Oct 15, 2025",
-    },
-    {
-      id: "C-2024-834",
-      title: "Traffic Violation Appeal",
-      type: "Traffic",
-      status: "Pending",
-      filingDate: "Dec 17, 2025",
-    },
-    {
-      id: "C-2024-855",
-      title: "Divorce Proceedings",
-      type: "Family",
-      status: "Active",
-      filingDate: "Sep 5, 2025",
-    },
-    {
-      id: "C-2024-223",
-      title: "Case#######",
-      type: "Criminal",
-      status: "Closed",
-      filingDate: "Sep 15, 2025",
-    },
-  ]);
+  const [cases, setCases] = useState([]);
 
   const [filteredCases, setFilteredCases] = useState([]);
   const [activeTab, setActiveTab] = useState("All Cases");
@@ -50,22 +22,55 @@ const MyCases = () => {
     let filtered = [...cases];
 
     if (activeTab !== "All Cases") {
-      // Handle "Open" tab specially (show Active cases)
-      if (activeTab === "Open") {
-        filtered = cases.filter(
-          (caseItem) => caseItem.status.toLowerCase() === "active"
-        );
-      } else {
-        filtered = cases.filter(
-          (caseItem) =>
-            caseItem.status.toLowerCase() === activeTab.toLowerCase()
-        );
-      }
+      filtered = cases.filter((caseItem) => {
+        const status = caseItem.status.toLowerCase();
+        const tab = activeTab.toLowerCase();
+
+        if (tab === "in progress") {
+          return status === "in progress" || status === "pending";
+        }
+        return status === tab;
+      });
     }
 
     setFilteredCases(filtered);
     setCurrentPage(1);
   }, [cases, activeTab]);
+
+  useEffect(() => {
+    const fetchCases = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch cases from the API
+        const response = await casesAPI.getCases();
+
+        // Transform backend data to match frontend structure
+        const transformedCases = response.data.map((caseItem) => ({
+          id: caseItem._id,
+          title: caseItem.title,
+          type: caseItem.caseType
+            ? caseItem.caseType.charAt(0).toUpperCase() +
+              caseItem.caseType.slice(1)
+            : "General",
+          status:
+            caseItem.status === "In Progress" ? "Pending" : caseItem.status,
+          filingDate: new Date(caseItem.createdAt).toLocaleDateString(),
+          priority: caseItem.priority,
+          court: caseItem.court,
+        }));
+
+        setCases(transformedCases);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching cases:", err);
+        setError("Failed to load cases. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchCases();
+  }, []);
 
   const indexOfLastCase = currentPage * casesPerPage;
   const indexOfFirstCase = indexOfLastCase - casesPerPage;
@@ -78,6 +83,12 @@ const MyCases = () => {
         return (
           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
             Active
+          </span>
+        );
+      case "open":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-500">
+            Open
           </span>
         );
       case "pending":
@@ -142,18 +153,42 @@ const MyCases = () => {
 
         {filteredCases.length === 0 ? (
           <div className=" bg-white rounded-lg shadow-sm p-8 text-center">
-            <h2 className="text-xl font-medium text-gray-700 mb-2">
-              No Cases Found
-            </h2>
-            <p className="text-gray-500 mb-6">
-              No cases match your selected filter.
-            </p>
-            <button
-              onClick={() => setActiveTab("All Cases")}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors inline-block"
-            >
-              View All Cases
-            </button>
+            {cases.length === 0 ? (
+              <>
+                <div className="text-gray-400 mb-4">
+                  <FaFile className="text-6xl mx-auto mb-4" />
+                </div>
+                <h2 className="text-xl font-medium text-gray-700 mb-2">
+                  No Cases Filed Yet
+                </h2>
+                <p className="text-gray-500 mb-6">
+                  You haven't filed any cases yet. Start by filing your first
+                  case.
+                </p>
+                <Link
+                  to="/client/newcase"
+                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors inline-flex items-center"
+                >
+                  <FaPlus className="mr-2" />
+                  File Your First Case
+                </Link>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-medium text-gray-700 mb-2">
+                  No Cases Found
+                </h2>
+                <p className="text-gray-500 mb-6">
+                  No cases match your selected filter.
+                </p>
+                <button
+                  onClick={() => setActiveTab("All Cases")}
+                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 transition-colors inline-block"
+                >
+                  View All Cases
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -195,6 +230,15 @@ const MyCases = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(caseItem.status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <Link
+                          to={`/client/case/${caseItem.id}`}
+                          className="text-green-600 hover:text-green-900 flex items-center"
+                        >
+                          <FaEye className="mr-1" />
+                          View Details
+                        </Link>
                       </td>
                     </tr>
                   ))}

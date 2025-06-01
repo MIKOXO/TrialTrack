@@ -1,18 +1,42 @@
 // /* eslint-disable no-unused-vars */
 import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { notificationsAPI } from "../services/api";
 import Logo from "./Logo.jsx";
 import {
   FaHome,
   FaFolder,
   FaPlus,
-  FaCalendarAlt,
   FaCog,
+  FaBell,
   FaSignOutAlt,
 } from "react-icons/fa";
 
 const ClientSidebar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    // Refresh unread count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await notificationsAPI.getNotifications();
+      const notifications = Array.isArray(response.data)
+        ? response.data
+        : response.data.notifications || [];
+      const unread = notifications.filter((n) => !n.read).length;
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error("Error fetching unread count:", err);
+      // Don't show error to user for background fetch
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -37,9 +61,9 @@ const ClientSidebar = () => {
       icon: <FaPlus className="w-5 h-5" />,
     },
     {
-      path: "/client/calendar",
-      name: "Calendar",
-      icon: <FaCalendarAlt className="w-5 h-5" />,
+      path: "/client/notifications",
+      name: "Notifications",
+      icon: <FaBell className="w-5 h-5" />,
     },
     {
       path: "/client/settings",
@@ -72,6 +96,11 @@ const ClientSidebar = () => {
                 >
                   <span className="mr-3 text-xl">{item.icon}</span>
                   {item.name}
+                  {item.path === "/client/notifications" && unreadCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}

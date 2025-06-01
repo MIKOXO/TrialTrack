@@ -9,6 +9,12 @@ const CaseItem = ({ title, caseNumber, description, status, filedDate }) => {
             Active
           </span>
         );
+      case "open":
+        return (
+          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-500">
+            Open
+          </span>
+        );
       case "pending":
         return (
           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">

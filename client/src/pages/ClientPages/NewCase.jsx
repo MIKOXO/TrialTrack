@@ -1,32 +1,36 @@
 /* eslint-disable no-unused-vars */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ClientLayout from "../../components/ClientLayout";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FaCalendarAlt } from "react-icons/fa";
 
 const NewCase = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    title: "",
-    caseType: "",
-    court: "",
-    reportDate: "",
-    description: "",
-    plaintiff: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-    },
-    defendant: {
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-    },
-    evidence: "",
-  });
+
+  const [formData, setFormData] = useState(
+    location.state?.formData || {
+      title: "",
+      caseType: "",
+      court: "",
+      reportDate: "",
+      description: "",
+      plaintiff: {
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+      },
+      defendant: {
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+      },
+      evidence: "",
+    }
+  );
 
   const caseTypes = [
     { value: "", label: "Select case type" },
@@ -47,6 +51,13 @@ const NewCase = () => {
     { value: "traffic", label: "Traffic Court" },
   ];
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    if (location.state?.formData) {
+      setFormData(location.state.formData);
+    }
+  }, [location.state]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -104,15 +115,28 @@ const NewCase = () => {
 
   const handleContinue = (e) => {
     e.preventDefault();
+    setSubmitError("");
 
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+    try {
+      const validationErrors = validate();
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
+      // Clear any previous errors
+      setErrors({});
+
+      // Navigate to the parties involved step with the current form data
+      console.log("Navigating to parties step with data:", formData);
+      navigate("/client/newcase/parties", {
+        state: { formData },
+        replace: false,
+      });
+    } catch (error) {
+      console.error("Error in handleContinue:", error);
+      setSubmitError("An error occurred. Please try again.");
     }
-
-    // Navigate to the parties involved step with the current form data
-    navigate("/client/newcase/parties", { state: { formData } });
   };
 
   return (
@@ -155,12 +179,31 @@ const NewCase = () => {
               }`}
               disabled={currentStep < 3}
             >
+              Legal Details
+            </button>
+            <button
+              className={`flex-1 py-3 px-4 text-center ${
+                currentStep === 4
+                  ? "bg-white rounded-lg text-green-600 font-medium"
+                  : "border-transparent text-gray-500"
+              }`}
+              disabled={currentStep < 4}
+            >
               Documents and review
             </button>
           </div>
         </div>
 
         <div className="mx-7 bg-white rounded-lg shadow-md p-6">
+          {submitError && (
+            <div
+              className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <span className="block sm:inline">{submitError}</span>
+            </div>
+          )}
+
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
             Case Information
           </h2>

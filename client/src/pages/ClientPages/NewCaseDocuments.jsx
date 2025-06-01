@@ -2,12 +2,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ClientLayout from "../../components/ClientLayout";
-import { FaUpload, FaFile, FaTrash } from "react-icons/fa";
+import { casesAPI, documentsAPI } from "../../services/api";
+import {
+  FaUpload,
+  FaFile,
+  FaEye,
+  FaTrash,
+  FaDownload,
+  FaSpinner,
+} from "react-icons/fa";
 
 const NewCaseDocuments = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentStep, setCurrentStep] = useState(3);
+  const [currentStep, setCurrentStep] = useState(4);
 
   // Get form data from location state or redirect to first step
   const [formData, setFormData] = useState(
@@ -31,14 +39,45 @@ const NewCaseDocuments = () => {
       },
       evidence: "",
       documents: [],
+      // Phase 1 - Essential Fields
+      priority: "Medium",
+      urgencyReason: "",
+      representation: {
+        hasLawyer: false,
+        lawyerName: "",
+        lawyerBarNumber: "",
+        lawyerContact: {
+          email: "",
+          phone: "",
+          address: "",
+        },
+        selfRepresented: true,
+      },
+      reliefSought: {
+        monetaryDamages: false,
+        injunctiveRelief: false,
+        declaratoryJudgment: false,
+        specificPerformance: false,
+        other: "",
+        detailedRequest: "",
+      },
     }
   );
 
   const [documents, setDocuments] = useState([]);
+  const [compliance, setCompliance] = useState({
+    verificationStatement: false,
+    perjuryAcknowledgment: false,
+    courtRulesAcknowledgment: false,
+    electronicSignature: "",
+  });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [dragActive, setDragActive] = useState(false);
 
   // Redirect if no form data
   useEffect(() => {
@@ -47,20 +86,88 @@ const NewCaseDocuments = () => {
     }
   }, [location.state, navigate]);
 
+  const validateFile = (file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "text/plain",
+    ];
+
+    if (file.size > maxSize) {
+      return `File "${file.name}" is too large. Maximum size is 10MB.`;
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return `File "${file.name}" has an unsupported format. Only PDF, DOC, DOCX, JPG, PNG, GIF, and TXT files are allowed.`;
+    }
+
+    return null;
+  };
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
+    processFiles(files);
+  };
 
-    // Create document objects with preview URLs
-    const newDocuments = files.map((file) => ({
-      id: Date.now() + Math.random().toString(36).substring(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file: file,
-      preview: URL.createObjectURL(file),
-    }));
+  const processFiles = (files) => {
+    const validFiles = [];
+    const errors = [];
 
-    setDocuments([...documents, ...newDocuments]);
+    files.forEach((file) => {
+      const error = validateFile(file);
+      if (error) {
+        errors.push(error);
+      } else {
+        validFiles.push({
+          id: Date.now() + Math.random().toString(36).substring(2, 9),
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          file: file,
+          preview: file.type.startsWith("image/")
+            ? URL.createObjectURL(file)
+            : null,
+          uploaded: false,
+        });
+      }
+    });
+
+    if (errors.length > 0) {
+      setSubmitError(errors.join(" "));
+      setTimeout(() => setSubmitError(""), 5000);
+    }
+
+    if (validFiles.length > 0) {
+      setDocuments([...documents, ...validFiles]);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const files = Array.from(e.dataTransfer.files);
+      processFiles(files);
+    }
   };
 
   const removeDocument = (id) => {
@@ -69,7 +176,7 @@ const NewCaseDocuments = () => {
   };
 
   const handleBack = () => {
-    navigate("/client/newcase/parties", {
+    navigate("/client/newcase/legal-details", {
       state: { formData: { ...formData, documents } },
     });
   };
@@ -77,8 +184,31 @@ const NewCaseDocuments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    setLoading(true);
+    // setLoading(true);
     setSubmitError("");
+
+    // Validate compliance fields
+    if (!compliance.verificationStatement) {
+      setSubmitError(
+        "You must verify that the facts stated are true and correct."
+      );
+      return;
+    }
+
+    if (!compliance.perjuryAcknowledgment) {
+      setSubmitError("You must acknowledge the perjury warning.");
+      return;
+    }
+
+    if (!compliance.courtRulesAcknowledgment) {
+      setSubmitError("You must acknowledge understanding of court rules.");
+      return;
+    }
+
+    if (!compliance.electronicSignature.trim()) {
+      setSubmitError("Electronic signature is required.");
+      return;
+    }
 
     try {
       const token = localStorage.getItem("token");
@@ -86,24 +216,59 @@ const NewCaseDocuments = () => {
         throw new Error("No authentication token found");
       }
 
-      // In a real application, we would post to the API
-      // For now, we'll just simulate a successful submission
+      const caseData = {
+        title: formData.title,
+        description: formData.description,
+        caseType: formData.caseType,
+        court: formData.court,
+        reportDate: formData.reportDate,
+        evidence: formData.evidence || "",
+        defendant: {
+          name: formData.defendant.name,
+          email: formData.defendant.email || "",
+          phone: formData.defendant.phone || "",
+          address: formData.defendant.address || "",
+        },
+        plaintiff: {
+          name: formData.plaintiff.name || "",
+          email: formData.plaintiff.email || "",
+          phone: formData.plaintiff.phone || "",
+          address: formData.plaintiff.address || "",
+        },
+        // Phase 1 - Essential Fields
+        priority: formData.priority || "Medium",
+        urgencyReason: formData.urgencyReason || "",
+        representation: formData.representation || {
+          hasLawyer: false,
+          selfRepresented: true,
+        },
+        reliefSought: formData.reliefSought || {},
+        compliance: compliance,
+      };
 
-      setTimeout(() => {
-        setLoading(false);
+      console.log("Submitting case data:", caseData);
+
+      // Submit case to backend using the configured API service
+      const response = await casesAPI.fileCase(caseData);
+
+      console.log("Case submission response:", response.data);
+
+      if (response.status === 201) {
         setSubmitSuccess(true);
 
         // Redirect after a delay
         setTimeout(() => {
           navigate("/client/mycases");
         }, 2000);
-      }, 1500);
+      }
     } catch (err) {
       console.error("Error filing case:", err);
+      console.error("Error response:", err.response?.data);
       setSubmitError(
-        err.response?.data?.error || "Failed to file case. Please try again."
+        err.response?.data?.error ||
+          err.response?.data?.details ||
+          "Failed to file case. Please try again."
       );
-      setLoading(false);
     }
   };
 
@@ -128,6 +293,11 @@ const NewCaseDocuments = () => {
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : " border-transparent text-gray-500"
               }`}
+              onClick={() =>
+                navigate("/client/newcase", {
+                  state: { formData: { ...formData, documents } },
+                })
+              }
             >
               Case Information
             </button>
@@ -138,6 +308,11 @@ const NewCaseDocuments = () => {
                   : "border-transparent text-gray-500"
               }`}
               disabled={currentStep < 2}
+              onClick={() =>
+                navigate("/client/newcase/parties", {
+                  state: { formData: { ...formData, documents } },
+                })
+              }
             >
               Parties Involved
             </button>
@@ -148,6 +323,21 @@ const NewCaseDocuments = () => {
                   : "border-transparent text-gray-500"
               }`}
               disabled={currentStep < 3}
+              onClick={() =>
+                navigate("/client/newcase/legal-details", {
+                  state: { formData: { ...formData, documents } },
+                })
+              }
+            >
+              Legal Details
+            </button>
+            <button
+              className={`flex-1 py-3 px-4 text-center ${
+                currentStep === 4
+                  ? "bg-white rounded-lg text-green-600 font-medium"
+                  : "border-transparent text-gray-500"
+              }`}
+              disabled={currentStep < 4}
             >
               Documents and review
             </button>
@@ -188,25 +378,55 @@ const NewCaseDocuments = () => {
                 Upload Documents (Optional)
               </label>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  dragActive
+                    ? "border-green-400 bg-green-50"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
                   id="documents"
                   multiple
                   className="hidden"
                   onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt"
                 />
                 <label
                   htmlFor="documents"
                   className="cursor-pointer flex flex-col items-center justify-center"
                 >
-                  <FaUpload className="text-gray-400 text-3xl mb-2" />
-                  <p className="text-gray-700 font-medium">
-                    Click to upload or drag and drop
+                  {uploadLoading ? (
+                    <FaSpinner className="text-green-500 text-3xl mb-2 animate-spin" />
+                  ) : (
+                    <FaUpload
+                      className={`text-3xl mb-2 ${
+                        dragActive ? "text-green-500" : "text-gray-400"
+                      }`}
+                    />
+                  )}
+                  <p
+                    className={`font-medium ${
+                      dragActive ? "text-green-700" : "text-gray-700"
+                    }`}
+                  >
+                    {dragActive
+                      ? "Drop files here"
+                      : "Click to upload or drag and drop"}
                   </p>
                   <p className="text-gray-500 text-sm mt-1">
-                    PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
+                    PDF, DOC, DOCX, JPG, PNG, GIF, TXT (Max 10MB each)
                   </p>
+                  {uploadLoading && (
+                    <p className="text-green-600 text-sm mt-2">
+                      Uploading files...
+                    </p>
+                  )}
                 </label>
               </div>
             </div>
@@ -214,35 +434,191 @@ const NewCaseDocuments = () => {
             {documents.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-gray-700 font-medium mb-2">
-                  Uploaded Documents
+                  Selected Documents ({documents.length})
                 </h3>
                 <div className="space-y-2">
                   {documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
+                      className={`flex items-center justify-between p-3 rounded-md border ${
+                        doc.uploaded
+                          ? "bg-green-50 border-green-200"
+                          : "bg-gray-50 border-gray-200"
+                      }`}
                     >
-                      <div className="flex items-center">
-                        <FaFile className="text-gray-500 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium">{doc.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {(doc.size / 1024).toFixed(2)} KB
+                      <div className="flex items-center flex-1">
+                        <div className="mr-3">
+                          {doc.type.startsWith("image/") ? (
+                            <img
+                              src={doc.preview}
+                              alt={doc.name}
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                          ) : (
+                            <FaFile
+                              className={`text-2xl ${
+                                doc.type === "application/pdf"
+                                  ? "text-red-500"
+                                  : doc.type.includes("word")
+                                  ? "text-blue-500"
+                                  : "text-gray-500"
+                              }`}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {doc.name}
                           </p>
+                          <div className="flex items-center space-x-4 text-xs text-gray-500">
+                            <span>{(doc.size / 1024).toFixed(1)} KB</span>
+                            <span className="capitalize">
+                              {doc.type.split("/")[1]}
+                            </span>
+                            {doc.uploaded && (
+                              <span className="text-green-600 font-medium">
+                                ✓ Uploaded
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDocument(doc.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <FaTrash />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        {doc.preview && (
+                          <button
+                            type="button"
+                            onClick={() => window.open(doc.preview, "_blank")}
+                            className="text-blue-500 hover:text-blue-700 p-1"
+                            title="Preview"
+                          >
+                            <FaEye />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeDocument(doc.id)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="Remove"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Compliance Section */}
+            <div className="mb-6">
+              <h3 className="text-gray-700 font-medium mb-4">
+                Legal Compliance & Verification
+              </h3>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                <p className="text-sm text-yellow-800 mb-3">
+                  <strong>Important:</strong> By filing this case, you are
+                  making statements under oath. False statements may result in
+                  perjury charges.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      id="verificationStatement"
+                      checked={compliance.verificationStatement}
+                      onChange={(e) =>
+                        setCompliance((prev) => ({
+                          ...prev,
+                          verificationStatement: e.target.checked,
+                        }))
+                      }
+                      className="mt-1 mr-3"
+                      required
+                    />
+                    <label
+                      htmlFor="verificationStatement"
+                      className="text-sm text-gray-700"
+                    >
+                      <strong>Verification Statement:</strong> I verify that the
+                      facts stated in this case filing are true and correct to
+                      the best of my knowledge and belief.
+                    </label>
+                  </div>
+
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      id="perjuryAcknowledgment"
+                      checked={compliance.perjuryAcknowledgment}
+                      onChange={(e) =>
+                        setCompliance((prev) => ({
+                          ...prev,
+                          perjuryAcknowledgment: e.target.checked,
+                        }))
+                      }
+                      className="mt-1 mr-3"
+                      required
+                    />
+                    <label
+                      htmlFor="perjuryAcknowledgment"
+                      className="text-sm text-gray-700"
+                    >
+                      <strong>Perjury Acknowledgment:</strong> I understand that
+                      making false statements in this filing may subject me to
+                      penalties for perjury under applicable law.
+                    </label>
+                  </div>
+
+                  <div className="flex items-start">
+                    <input
+                      type="checkbox"
+                      id="courtRulesAcknowledgment"
+                      checked={compliance.courtRulesAcknowledgment}
+                      onChange={(e) =>
+                        setCompliance((prev) => ({
+                          ...prev,
+                          courtRulesAcknowledgment: e.target.checked,
+                        }))
+                      }
+                      className="mt-1 mr-3"
+                      required
+                    />
+                    <label
+                      htmlFor="courtRulesAcknowledgment"
+                      className="text-sm text-gray-700"
+                    >
+                      <strong>Court Rules:</strong> I acknowledge that I have
+                      read and understand the court rules and procedures
+                      applicable to this case.
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Electronic Signature
+                  </label>
+                  <input
+                    type="text"
+                    value={compliance.electronicSignature}
+                    onChange={(e) =>
+                      setCompliance((prev) => ({
+                        ...prev,
+                        electronicSignature: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    placeholder="Type your full name as electronic signature"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    By typing your name, you are providing your electronic
+                    signature for this filing.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <div className="mb-6">
               <h3 className="text-gray-700 font-medium mb-2">Case Summary</h3>
@@ -299,7 +675,7 @@ const NewCaseDocuments = () => {
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                className="px-5 py-3 bg-gray-200 text-gray-700 rounded-md hover:scale-95 ease-in-out duration-300"
               >
                 Back
               </button>
