@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
+import { courtsAPI } from "../../services/api";
 import {
   FaCalendarAlt,
   FaClock,
@@ -14,76 +18,10 @@ import {
 } from "react-icons/fa";
 
 const JudgeCalendar = () => {
-  const [hearings, setHearings] = useState([
-    {
-      id: 1,
-      caseTitle: "Smith vs. Johnson",
-      caseNumber: "C-2023-089",
-      caseId: 1,
-      date: "2023-11-20",
-      time: "10:00",
-      location: "Courtroom 302",
-      status: "Upcoming",
-      parties: ["John Smith", "Robert Johnson"],
-      notes: "Initial hearing for criminal case",
-      type: "Criminal",
-    },
-    {
-      id: 2,
-      caseTitle: "Wilson vs. Harvey",
-      caseNumber: "C-2023-065",
-      caseId: 2,
-      date: "2023-12-05",
-      time: "14:30",
-      location: "Courtroom 201",
-      status: "Upcoming",
-      parties: ["James Wilson", "Thomas Harvey"],
-      notes: "Preliminary hearing for civil dispute",
-      type: "Civil",
-    },
-    {
-      id: 3,
-      caseTitle: "Lewis Dispute",
-      caseNumber: "C-2023-035",
-      caseId: 3,
-      date: "2023-12-15",
-      time: "09:00",
-      location: "Courtroom 105",
-      status: "Upcoming",
-      parties: ["Sarah Lewis", "Michael Lewis"],
-      notes: "Property division hearing",
-      type: "Civil",
-    },
-    {
-      id: 4,
-      caseTitle: "State vs. Thompson",
-      caseNumber: "C-2023-090",
-      caseId: 4,
-      date: "2023-10-15",
-      time: "11:00",
-      location: "Courtroom 302",
-      status: "Completed",
-      parties: ["State", "James Thompson"],
-      notes: "Case dismissed",
-      type: "Criminal",
-    },
-    {
-      id: 5,
-      caseTitle: "John vs. Jane",
-      caseNumber: "C-2023-075",
-      caseId: 5,
-      date: "2023-11-10",
-      time: "13:00",
-      location: "Courtroom 201",
-      status: "Completed",
-      parties: ["John Doe", "Jane Doe"],
-      notes: "Custody hearing",
-      type: "Civil",
-    },
-  ]);
-
+  const [hearings, setHearings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
@@ -93,46 +31,87 @@ const JudgeCalendar = () => {
     caseNumber: "",
     date: "",
     time: "",
-    location: "",
+    selectedCourt: "",
     parties: [],
     notes: "",
     type: "Civil",
   });
-  const [availableCases, setAvailableCases] = useState([
-    {
-      id: 1,
-      title: "Smith vs. Johnson",
-      caseNumber: "C-2023-089",
-      type: "Criminal",
-    },
-    {
-      id: 2,
-      title: "Wilson vs. Harvey",
-      caseNumber: "C-2023-065",
-      type: "Civil",
-    },
-    { id: 3, title: "Lewis Dispute", caseNumber: "C-2023-035", type: "Civil" },
-    {
-      id: 6,
-      title: "Alison vs. Miles",
-      caseNumber: "C-2023-085",
-      type: "Criminal",
-    },
-    {
-      id: 7,
-      title: "Roberts Family Matter",
-      caseNumber: "C-2023-095",
-      type: "Family",
-    },
-    {
-      id: 8,
-      title: "Commercial Dispute",
-      caseNumber: "C-2023-105",
-      type: "Commercial",
-    },
-  ]);
+  const [availableCases, setAvailableCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState(null);
   const [partyInput, setPartyInput] = useState("");
+  const [availableCourts, setAvailableCourts] = useState([]);
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        // Fetch assigned cases for the judge
+        const casesResponse = await axios.get(
+          "http://localhost:3001/api/case",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Transform cases data for the dropdown
+        const transformedCases = casesResponse.data.map((caseItem) => ({
+          id: caseItem._id,
+          title: caseItem.title,
+          caseNumber: caseItem._id.slice(-8).toUpperCase(),
+          type: "General", // Backend doesn't have type field
+        }));
+
+        setAvailableCases(transformedCases);
+
+        // Fetch available courts
+        const courtsResponse = await courtsAPI.getCourts();
+        setAvailableCourts(courtsResponse.data);
+
+        // Fetch hearings for the judge
+        const hearingsResponse = await axios.get(
+          "http://localhost:3001/api/hearings",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Transform hearings data for the calendar
+        const transformedHearings = hearingsResponse.data.map((hearing) => ({
+          id: hearing._id,
+          caseTitle: hearing.case?.title || "Unknown Case",
+          caseNumber: hearing._id.slice(-8).toUpperCase(),
+          caseId: hearing.case?._id || "",
+          date: hearing.date.split("T")[0], // Convert to YYYY-MM-DD format
+          time: hearing.time,
+          location: hearing.court?.name || "TBD",
+          status:
+            new Date(hearing.date) > new Date() ? "Upcoming" : "Completed",
+          parties: [], // Backend doesn't store parties separately
+          notes: hearing.notes || "",
+          type: "General",
+        }));
+
+        setHearings(transformedHearings);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching calendar data:", err);
+        setError("Failed to load calendar data. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Group hearings by date
   const groupHearingsByDate = () => {
@@ -218,10 +197,32 @@ const JudgeCalendar = () => {
     }
   };
 
-  const handleDeleteHearing = (hearingId) => {
+  const handleDeleteHearing = async (hearingId) => {
     if (window.confirm("Are you sure you want to delete this hearing?")) {
-      setHearings(hearings.filter((hearing) => hearing.id !== hearingId));
-      setActionMenuOpen(null);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          showError("Authentication token not found. Please sign in again.");
+          return;
+        }
+
+        await axios.delete(`http://localhost:3001/api/hearings/${hearingId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Remove from local state
+        setHearings(hearings.filter((hearing) => hearing.id !== hearingId));
+        setActionMenuOpen(null);
+        showSuccess("Hearing deleted successfully!");
+      } catch (err) {
+        console.error("Error deleting hearing:", err);
+        showError(
+          err.response?.data?.error ||
+            "Failed to delete hearing. Please try again."
+        );
+      }
     }
   };
 
@@ -238,6 +239,14 @@ const JudgeCalendar = () => {
     const selectedCase = availableCases.find((c) => c.id === caseId);
 
     if (selectedCase) {
+      // Check if case is closed
+      if (selectedCase.status === "Closed") {
+        showError(
+          "Cannot schedule hearing for closed case. Only open or in-progress cases can have hearings scheduled."
+        );
+        return;
+      }
+
       setSelectedCase(selectedCase);
       setNewHearing({
         ...newHearing,
@@ -267,44 +276,113 @@ const JudgeCalendar = () => {
     });
   };
 
-  const handleScheduleHearing = () => {
+  const handleScheduleHearing = async () => {
     if (
-      !newHearing.caseTitle ||
+      !selectedCase ||
       !newHearing.date ||
       !newHearing.time ||
-      !newHearing.location
+      !newHearing.selectedCourt
     ) {
-      alert("Please fill in all required fields");
+      showError("Please fill in all required fields");
       return;
     }
 
-    const newHearingObj = {
-      id: hearings.length + 1,
-      caseTitle: newHearing.caseTitle,
-      caseNumber: newHearing.caseNumber,
-      caseId: selectedCase?.id || 0,
-      date: newHearing.date,
-      time: newHearing.time,
-      location: newHearing.location,
-      status: "Upcoming",
-      parties: newHearing.parties,
-      notes: newHearing.notes,
-      type: newHearing.type,
-    };
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
+      }
 
-    setHearings([...hearings, newHearingObj]);
-    setShowScheduleModal(false);
-    setNewHearing({
-      caseTitle: "",
-      caseNumber: "",
-      date: "",
-      time: "",
-      location: "",
-      parties: [],
-      notes: "",
-      type: "Civil",
-    });
-    setSelectedCase(null);
+      // Find the selected court details
+      const selectedCourtData = availableCourts.find(
+        (court) => court._id === newHearing.selectedCourt
+      );
+
+      const hearingData = {
+        date: newHearing.date,
+        time: newHearing.time,
+        notes: newHearing.notes,
+        courtId: newHearing.selectedCourt,
+      };
+
+      const response = await axios.post(
+        `http://localhost:3001/api/hearings/create/${selectedCase.id}`,
+        hearingData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.status === 201) {
+        // Add the new hearing to the local state
+        const newHearingObj = {
+          id: response.data._id,
+          caseTitle: selectedCase.title,
+          caseNumber: selectedCase.caseNumber,
+          caseId: selectedCase.id,
+          date: newHearing.date,
+          time: newHearing.time,
+          location: selectedCourtData?.name || "Selected Court",
+          status: "Upcoming",
+          parties: newHearing.parties,
+          notes: newHearing.notes,
+          type: newHearing.type,
+        };
+
+        setHearings([...hearings, newHearingObj]);
+        setShowScheduleModal(false);
+        setNewHearing({
+          caseTitle: "",
+          caseNumber: "",
+          date: "",
+          time: "",
+          selectedCourt: "",
+          parties: [],
+          notes: "",
+          type: "Civil",
+        });
+        setSelectedCase(null);
+        showSuccess(
+          `Hearing successfully scheduled for "${
+            selectedCase.title
+          }" on ${new Date(newHearing.date).toLocaleDateString()} at ${
+            newHearing.time
+          } in ${selectedCourtData?.name || "Selected Court"}`,
+          6000 // Show for 6 seconds since it's a longer message
+        );
+      }
+    } catch (err) {
+      console.error("Error scheduling hearing:", err);
+
+      // Handle specific error types
+      if (err.response?.status === 409) {
+        showError(
+          err.response.data.details ||
+            err.response.data.error ||
+            "Scheduling conflict detected. Please choose a different time or courtroom.",
+          8000 // Show longer for conflict messages
+        );
+      } else if (
+        err.response?.status === 400 &&
+        err.response.data.error?.includes("closed case")
+      ) {
+        showError(
+          err.response.data.details ||
+            err.response.data.error ||
+            "Cannot schedule hearing for closed case. Only open or in-progress cases can have hearings scheduled.",
+          6000
+        );
+      } else {
+        showError(
+          err.response?.data?.error ||
+            "Failed to schedule hearing. Please try again."
+        );
+      }
+    }
   };
 
   // Get hearings for selected date
@@ -316,6 +394,30 @@ const JudgeCalendar = () => {
   const calendarDays = generateCalendarDays();
   const hearingsByDate = groupHearingsByDate();
   const selectedDateHearings = getHearingsForSelectedDate();
+
+  if (loading) {
+    return (
+      <JudgeLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading calendar...</p>
+        </div>
+      </JudgeLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <JudgeLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </JudgeLayout>
+    );
+  }
 
   return (
     <section>
@@ -329,7 +431,7 @@ const JudgeCalendar = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <div className="flex justify-between items-center mb-4">
                 <button
                   onClick={previousMonth}
@@ -425,7 +527,7 @@ const JudgeCalendar = () => {
 
             {/* Selected Date Hearings */}
             {selectedDate && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-medium">
                     Hearings for{" "}
@@ -438,7 +540,7 @@ const JudgeCalendar = () => {
                   </h2>
                   <button
                     onClick={() => openScheduleModal(selectedDate)}
-                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors flex items-center text-sm"
+                    className="bg-tertiary text-white px-3 py-1 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center text-sm"
                   >
                     <FaPlus className="mr-1" /> Schedule Hearing
                   </button>
@@ -530,12 +632,12 @@ const JudgeCalendar = () => {
 
           {/* Upcoming Hearings Sidebar */}
           <div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Upcoming Hearings</h2>
                 <Link
                   to="/judge/hearings"
-                  className="text-green-600 text-sm hover:underline"
+                  className="text-tertiary text-sm hover:underline"
                 >
                   View All
                 </Link>
@@ -588,12 +690,12 @@ const JudgeCalendar = () => {
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
               <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
               <div className="space-y-2">
                 <button
                   onClick={() => openScheduleModal()}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center"
+                  className="w-full bg-tertiary text-white px-4 py-2 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center"
                 >
                   <FaPlus className="mr-2" /> Schedule New Hearing
                 </button>
@@ -623,7 +725,7 @@ const JudgeCalendar = () => {
                 <select
                   value={selectedCase?.id || ""}
                   onChange={handleCaseSelect}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                 >
                   <option value="">-- Select a case --</option>
                   {availableCases.map((c) => (
@@ -645,7 +747,7 @@ const JudgeCalendar = () => {
                     onChange={(e) =>
                       setNewHearing({ ...newHearing, date: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                   />
                 </div>
 
@@ -659,7 +761,7 @@ const JudgeCalendar = () => {
                     onChange={(e) =>
                       setNewHearing({ ...newHearing, time: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                   />
                 </div>
               </div>
@@ -675,7 +777,7 @@ const JudgeCalendar = () => {
                   onChange={(e) =>
                     setNewHearing({ ...newHearing, location: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                 />
               </div>
 
@@ -689,11 +791,11 @@ const JudgeCalendar = () => {
                     placeholder="Add party name"
                     value={partyInput}
                     onChange={(e) => setPartyInput(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                   />
                   <button
                     onClick={handleAddParty}
-                    className="px-4 py-2 bg-green-600 text-white rounded-r-md hover:bg-green-700"
+                    className="px-4 py-2 bg-tertiary text-white rounded-r-md hover:bg-green-700 ease-in-out duration-300"
                   >
                     Add
                   </button>
@@ -729,20 +831,20 @@ const JudgeCalendar = () => {
                     setNewHearing({ ...newHearing, notes: e.target.value })
                   }
                   rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                 ></textarea>
               </div>
 
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 ease-in-out duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleScheduleHearing}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300"
                 >
                   Schedule Hearing
                 </button>

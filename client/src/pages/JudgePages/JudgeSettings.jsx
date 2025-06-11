@@ -1,137 +1,249 @@
-import { useState, useEffect } from "react";
+/* eslint-disable no-unused-vars */
+import { useState, useEffect, useRef } from "react";
 import JudgeLayout from "../../components/JudgeLayout";
-import { FaUser, FaLock, FaCamera, FaTrash, FaCheck } from "react-icons/fa";
-import profileImage from "../../assets/IMG6.jpg";
+import {
+  FaUser,
+  FaLock,
+  FaBell,
+  FaCog,
+  FaSave,
+  FaCamera,
+  FaTrash,
+} from "react-icons/fa";
+import { authAPI } from "../../services/api";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
 
 const JudgeSettings = () => {
   const [user, setUser] = useState(null);
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
-  const [profilePicture, setProfilePicture] = useState(profileImage);
-  const [profileForm, setProfileForm] = useState({
-    name: "John Doe",
-    email: "JohnDoe123@example.com",
-    phone: "+251-000-000-000",
-    role: "Litigant",
-    bio: "I am a plaintiff seeking legal representation for a personal injury case.",
+  const [loading, setLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const fileInputRef = useRef(null);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [profileData, setProfileData] = useState({
+    username: "",
+    email: "",
+    role: "Judge",
   });
-  const [passwordForm, setPasswordForm] = useState({
+
+  const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
+
+  const [notificationSettings, setNotificationSettings] = useState({
+    emailNotifications: true,
+    caseUpdates: true,
+    hearingReminders: true,
+    systemAlerts: true,
+  });
 
   useEffect(() => {
-    // In a real app, we would fetch the user data from the API
-    // For now, we'll use the mock data already in state
-    const mockUser = {
-      name: "John Doe",
-      email: "JohnDoe123@example.com",
-      phone: "+251-000-000-000",
-      role: "Litigant",
-      bio: "I am a plaintiff seeking legal representation for a personal injury case.",
+    const loadUserProfile = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          setProfileData({
+            username: user.username || "",
+            email: user.email || "",
+            role: user.role || "Judge",
+          });
+
+          // Set profile picture if exists
+          if (user.profilePicture) {
+            setProfilePicture(
+              `http://localhost:3001/uploads/${user.profilePicture}`
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user profile:", error);
+        showError("Failed to load user profile");
+      }
     };
 
-    setUser(mockUser);
-  }, []);
+    loadUserProfile();
+  }, [showError]);
 
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-    setProfileForm({
-      ...profileForm,
-      [name]: value,
-    });
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+
+    if (!profileData.username.trim() || !profileData.email.trim()) {
+      showError("Username and email are required");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+
+      // Make API call to update profile
+      await authAPI.updateProfile(storedUser._id, {
+        username: profileData.username,
+        email: profileData.email,
+      });
+
+      // Update localStorage
+      const updatedUser = { ...storedUser, ...profileData };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      showSuccess("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      showError(error.response?.data?.message || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm({
-      ...passwordForm,
-      [name]: value,
-    });
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+
+    if (
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.confirmPassword
+    ) {
+      showError("All password fields are required");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showError("New passwords don't match!");
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      showError("New password must be at least 6 characters long");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+
+      // Make API call to change password
+      await authAPI.updateProfile(storedUser._id, {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+
+      showSuccess("Password changed successfully!");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      console.error("Error changing password:", error);
+      showError(error.response?.data?.message || "Failed to change password");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleProfilePictureChange = (e) => {
+  const handleNotificationUpdate = () => {
+    // For now, just show success message since notification settings
+    // would typically be stored in user preferences
+    showSuccess("Notification settings updated successfully!");
+  };
+
+  const handleProfilePictureClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfilePictureChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      showError("Please select a valid image file (JPEG, PNG, GIF, or WebP)");
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      showError("File size must be less than 5MB");
+      return;
+    }
+
+    try {
+      setUploadLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+
+      const response = await authAPI.uploadProfilePicture(
+        storedUser._id,
+        formData
+      );
+
+      // Update profile picture preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePicture(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Update localStorage with new profile picture
+      const updatedUser = {
+        ...storedUser,
+        profilePicture: response.data.user.profilePicture,
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      showSuccess("Profile picture updated successfully!");
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      showError(
+        error.response?.data?.error || "Failed to upload profile picture"
+      );
+    } finally {
+      setUploadLoading(false);
     }
   };
 
-  const handleRemoveProfilePicture = () => {
-    // Set to default silhouette image or similar
-    setProfilePicture(null);
-  };
+  const handleRemoveProfilePicture = async () => {
+    try {
+      setUploadLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
 
-  const handleProfileSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
+      // Update profile to remove picture
+      await authAPI.updateProfile(storedUser._id, { profilePicture: null });
 
-    // In a real app, we would send the data to the API
-    // For now, we'll simulate a successful update
-    setTimeout(() => {
-      setUser({
-        ...profileForm,
-        profilePicture,
-      });
-      setSuccess("Profile updated successfully");
-      setLoading(false);
-    }, 1000);
-  };
+      // Update state and localStorage
+      setProfilePicture(null);
+      const updatedUser = { ...storedUser, profilePicture: null };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
 
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    // Validate passwords
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setError("New passwords do not match");
-      setLoading(false);
-      return;
+      showSuccess("Profile picture removed successfully!");
+    } catch (error) {
+      console.error("Error removing profile picture:", error);
+      showError(
+        error.response?.data?.message || "Failed to remove profile picture"
+      );
+    } finally {
+      setUploadLoading(false);
     }
-
-    if (passwordForm.newPassword.length < 8) {
-      setError("Password must be at least 8 characters long");
-      setLoading(false);
-      return;
-    }
-
-    // In a real app, we would send the data to the API
-    // For now, we'll simulate a successful update
-    setTimeout(() => {
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      setSuccess("Password updated successfully");
-      setLoading(false);
-    }, 1000);
   };
 
-  const handleNotificationSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    // In a real app, we would send the data to the API
-    // For now, we'll simulate a successful update
-    setTimeout(() => {
-      setSuccess("Notification settings updated successfully");
-      setLoading(false);
-    }, 1000);
-  };
+  const tabs = [
+    { id: "profile", name: "Profile", icon: <FaUser /> },
+    { id: "password", name: "Password", icon: <FaLock /> },
+  ];
 
   return (
     <section>
@@ -145,286 +257,209 @@ const JudgeSettings = () => {
 
         <div className="my-5 py-3 bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-2 flex border-b mb-6 mx-5 w-[330px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
-            <button
-              className={`py-3 px-8 text-center font-medium transition-all  ${
-                activeTab === "profile"
-                  ? "bg-white rounded-lg"
-                  : "border-transparent text-gray-500"
-              }`}
-              onClick={() => setActiveTab("profile")}
-            >
-              <FaUser className="inline mr-2" /> Profile
-            </button>
-            <button
-              className={`py-3 px-8 text-center font-medium transition-all  ${
-                activeTab === "password"
-                  ? "bg-white rounded-lg"
-                  : "border-transparent text-gray-500"
-              }`}
-              onClick={() => setActiveTab("password")}
-            >
-              <FaLock className="inline mr-2" /> Password
-            </button>
-            {/* <button
-                      className={`px-4 py-3 font-medium ${
-                        activeTab === "notifications"
-                          ? "text-green-600 border-b-2 border-green-600"
-                          : "text-gray-600 hover:text-green-600"
-                      }`}
-                      onClick={() => setActiveTab("notifications")}
-                    >
-                      <FaBell className="inline mr-2" /> Notifications
-                    </button> */}
+            <nav className="flex">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-row gap-2 items-center py-3 px-8 text-center font-medium transition-all  ${
+                    activeTab === tab.id
+                      ? "bg-white rounded-lg"
+                      : "border-transparent text-gray-500"
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
           <div className="p-6">
-            {success && (
-              <div className="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative flex items-center">
-                <FaCheck className="mr-2" />
-                <span>{success}</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                <span>{error}</span>
-              </div>
-            )}
-
             {activeTab === "profile" && (
-              <form onSubmit={handleProfileSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h2 className="text-lg font-medium mb-4">
+                  Profile Information
+                </h2>
+                <form onSubmit={handleProfileUpdate} className="space-y-6">
+                  {/* Profile Picture Section */}
                   <div>
-                    <label
-                      htmlFor="username"
-                      className="block text-gray-700 font-medium mb-2"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profile Picture
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <img
+                          src={
+                            profilePicture ||
+                            "https://via.placeholder.com/100x100?text=Admin"
+                          }
+                          alt="Profile"
+                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                        />
+                        {uploadLoading && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleProfilePictureClick}
+                          disabled={uploadLoading}
+                          className="bg-tertiary text-white px-4 py-2 rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                        >
+                          <FaCamera />
+                          <span>
+                            {uploadLoading ? "Uploading..." : "Change Picture"}
+                          </span>
+                        </button>
+                        {profilePicture && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveProfilePicture}
+                            disabled={uploadLoading}
+                            className="px-4 py-2 bg-red-600 text-white text-sm rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          >
+                            <FaTrash />
+                            <span>Remove Picture</span>
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleProfilePictureChange}
+                        className="hidden"
+                        accept="image/*"
+                        disabled={uploadLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Supported formats: JPEG, PNG, GIF, WebP. Maximum size:
+                      5MB.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Username
                     </label>
                     <input
                       type="text"
-                      id="username"
-                      name="username"
-                      value={profileForm.username}
-                      onChange={handleProfileChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                      value={profileData.username}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          username: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-gray-700 font-medium mb-2"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email
                     </label>
                     <input
                       type="email"
-                      id="email"
-                      name="email"
-                      value={profileForm.email}
-                      onChange={handleProfileChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                      value={profileData.email}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          email: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="phone"
-                    className="block text-gray-700 font-medium mb-2"
-                  >
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={profileForm.phone}
-                    onChange={handleProfileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="address"
-                    className="block text-gray-700 font-medium mb-2"
-                  >
-                    Address
-                  </label>
-                  <textarea
-                    id="address"
-                    name="address"
-                    value={profileForm.address}
-                    onChange={handleProfileChange}
-                    rows="3"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                  ></textarea>
-                </div>
-
-                <div className="mt-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role
+                    </label>
+                    <input
+                      type="text"
+                      value={profileData.role}
+                      disabled
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 bg-gray-100 text-gray-500"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50"
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
-                    {loading ? "Saving..." : "Save Changes"}
+                    <FaSave />
+                    <span>{loading ? "Saving..." : "Save Changes"}</span>
                   </button>
-                </div>
-              </form>
+                </form>
+              </div>
             )}
 
             {activeTab === "password" && (
-              <form onSubmit={handlePasswordSubmit}>
-                <div>
-                  <label
-                    htmlFor="currentPassword"
-                    className="block text-gray-700 font-medium mb-2"
-                  >
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    id="currentPassword"
-                    name="currentPassword"
-                    value={passwordForm.currentPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="newPassword"
-                    className="block text-gray-700 font-medium mb-2"
-                  >
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    id="newPassword"
-                    name="newPassword"
-                    value={passwordForm.newPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                  />
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-gray-700 font-medium mb-2"
-                  >
-                    Confirm New Password
-                  </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={passwordForm.confirmPassword}
-                    onChange={handlePasswordChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                    required
-                  />
-                </div>
-
-                <div className="mt-6">
+              <div>
+                <h2 className="text-lg font-medium mb-4">Change Password</h2>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Current Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          currentPassword: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) =>
+                        setPasswordData({
+                          ...passwordData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50"
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                   >
-                    {loading ? "Updating..." : "Update Password"}
+                    <FaSave />
+                    <span>{loading ? "Changing..." : "Change Password"}</span>
                   </button>
-                </div>
-              </form>
+                </form>
+              </div>
             )}
-
-            {/* {activeTab === "notifications" && (
-                      <form onSubmit={handleNotificationSubmit}>
-                        <div className="space-y-4">
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id="emailNotifications"
-                              name="emailNotifications"
-                              checked={notificationSettings.emailNotifications}
-                              onChange={handleNotificationChange}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                            />
-                            <label
-                              htmlFor="emailNotifications"
-                              className="ml-2 block text-gray-700"
-                            >
-                              Email Notifications
-                            </label>
-                          </div>
-        
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id="hearingReminders"
-                              name="hearingReminders"
-                              checked={notificationSettings.hearingReminders}
-                              onChange={handleNotificationChange}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                            />
-                            <label
-                              htmlFor="hearingReminders"
-                              className="ml-2 block text-gray-700"
-                            >
-                              Hearing Reminders (24 hours before)
-                            </label>
-                          </div>
-        
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id="caseUpdates"
-                              name="caseUpdates"
-                              checked={notificationSettings.caseUpdates}
-                              onChange={handleNotificationChange}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                            />
-                            <label
-                              htmlFor="caseUpdates"
-                              className="ml-2 block text-gray-700"
-                            >
-                              Case Status Updates
-                            </label>
-                          </div>
-        
-                          <div className="flex items-center">
-                            <input
-                              type="checkbox"
-                              id="documentUploads"
-                              name="documentUploads"
-                              checked={notificationSettings.documentUploads}
-                              onChange={handleNotificationChange}
-                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                            />
-                            <label
-                              htmlFor="documentUploads"
-                              className="ml-2 block text-gray-700"
-                            >
-                              Document Upload Notifications
-                            </label>
-                          </div>
-                        </div>
-        
-                        <div className="mt-6">
-                          <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
-                          >
-                            {loading ? "Saving..." : "Save Preferences"}
-                          </button>
-                        </div>
-                      </form>
-                    )} */}
           </div>
         </div>
       </JudgeLayout>

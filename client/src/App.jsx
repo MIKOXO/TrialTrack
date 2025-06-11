@@ -17,13 +17,15 @@ import JudgeHome from "./pages/JudgePages/JudgeHome";
 import JudgeCases from "./pages/JudgePages/JudgeCases";
 import JudgeCalendar from "./pages/JudgePages/JudgeCalendar";
 import JudgeSettings from "./pages/JudgePages/JudgeSettings";
-import JudgeHearings from "./pages/JudgePages/JudgeHearings";
 import AdminUsers from "./pages/AdminPages/AdminUsers";
 import NewCaseParties from "./pages/ClientPages/NewCaseParties";
 import NewCaseDocuments from "./pages/ClientPages/NewCaseDocuments";
 import NewCaseLegalDetails from "./pages/ClientPages/NewCaseLegalDetails";
 import ClientNotifications from "./pages/ClientPages/ClientNotifications";
 import CaseDetails from "./pages/ClientPages/CaseDetails";
+import JudgeHearingsPage from "./pages/JudgePages/JudgeHearingsPage";
+import JudgeHearingDetailPage from "./pages/JudgePages/JudgeHearingDetailPage";
+import JudgeCaseDetailPage from "./pages/JudgePages/JudgeCaseDetailPage";
 
 const App = () => {
   return (
@@ -71,7 +73,12 @@ const App = () => {
         <Route element={<ProtectedRoute role="Judge" />}>
           <Route path="/judge/home" element={<JudgeHome />} />
           <Route path="/judge/cases" element={<JudgeCases />} />
-          <Route path="/judge/hearings" element={<JudgeHearings />} />
+          <Route path="/judge/cases/:id" element={<JudgeCaseDetailPage />} />
+          <Route path="/judge/hearings" element={<JudgeHearingsPage />} />
+          <Route
+            path="/judge/hearings/:id"
+            element={<JudgeHearingDetailPage />}
+          />
           <Route path="/judge/calendar" element={<JudgeCalendar />} />
           <Route path="/judge/settings" element={<JudgeSettings />} />
         </Route>

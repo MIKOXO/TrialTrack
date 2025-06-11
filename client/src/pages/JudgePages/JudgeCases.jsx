@@ -1,74 +1,25 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
-import { FaSearch, FaEllipsisH } from "react-icons/fa";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
+import { courtsAPI } from "../../services/api";
+import {
+  FaSearch,
+  FaEllipsisV,
+  FaEdit,
+  FaCalendarAlt,
+  FaEye,
+  FaClock,
+  FaMapMarkerAlt,
+} from "react-icons/fa";
 import { Link } from "react-router-dom";
 
 const JudgeCases = () => {
-  const [cases, setCases] = useState([
-    {
-      id: 1,
-      title: "Smith vs. Johnson",
-      caseNumber: "C-2023-089",
-      type: "Criminal",
-      status: "Active",
-      date: "Oct 15, 2023",
-      scheduledHearing: null,
-    },
-    {
-      id: 2,
-      title: "Wilson vs. Harvey",
-      caseNumber: "C-2023-065",
-      type: "Civil",
-      status: "Pending",
-      date: "Dec 25, 2023",
-      scheduledHearing: null,
-    },
-    {
-      id: 3,
-      title: "Lewis Dispute",
-      caseNumber: "C-2023-035",
-      type: "Civil",
-      status: "Urgent",
-      date: "Dec 12, 2023",
-      scheduledHearing: {
-        date: "2023-12-15",
-        time: "10:00",
-        location: "Courtroom 302",
-      },
-    },
-    {
-      id: 4,
-      title: "State vs. Thompson",
-      caseNumber: "C-2023-090",
-      type: "Criminal",
-      status: "Closed",
-      date: "Feb 05, 2023",
-      scheduledHearing: null,
-    },
-    {
-      id: 5,
-      title: "John vs. Jane",
-      caseNumber: "C-2023-075",
-      type: "Civil",
-      status: "Urgent",
-      date: "Feb 05, 2023",
-      scheduledHearing: {
-        date: "2023-11-20",
-        time: "14:30",
-        location: "Courtroom 201",
-      },
-    },
-    {
-      id: 6,
-      title: "Alison vs. Miles",
-      caseNumber: "C-2023-085",
-      type: "Criminal",
-      status: "Active",
-      date: "May 25, 2023",
-      scheduledHearing: null,
-    },
-  ]);
+  const [cases, setCases] = useState([]);
+  const dropdownRef = useRef(null);
+  const { toasts, showSuccess, showError, removeToast } = useToast();
 
   const [filteredCases, setFilteredCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,7 +33,13 @@ const JudgeCases = () => {
   const [newStatus, setNewStatus] = useState("");
   const [hearingDate, setHearingDate] = useState("");
   const [hearingTime, setHearingTime] = useState("");
-  const [hearingLocation, setHearingLocation] = useState("");
+  const [selectedCourt, setSelectedCourt] = useState("");
+  const [availableCourts, setAvailableCourts] = useState([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+
+  // Dropdown positioning
+  const [dropdownPosition, setDropdownPosition] = useState(null);
 
   useEffect(() => {
     // Filter cases based on search term and active tab
@@ -108,12 +65,9 @@ const JudgeCases = () => {
           (caseItem) => caseItem.scheduledHearing !== null
         );
       } else if (activeTab === "open") {
-        // Show active and pending cases
+        // Show only open cases
         filtered = filtered.filter(
-          (caseItem) =>
-            caseItem.status.toLowerCase() === "active" ||
-            caseItem.status.toLowerCase() === "pending" ||
-            caseItem.status.toLowerCase() === "urgent"
+          (caseItem) => caseItem.status.toLowerCase() === "open"
         );
       } else {
         // Filter by status for other tabs
@@ -127,13 +81,132 @@ const JudgeCases = () => {
     setFilteredCases(filtered);
   }, [cases, searchTerm, activeTab]);
 
+  // Fetch available courts
+  const fetchCourts = async () => {
+    try {
+      const response = await courtsAPI.getCourts();
+      setAvailableCourts(response.data);
+    } catch (err) {
+      console.error("Error fetching courts:", err);
+      showError("Failed to load courts. Please try again later.");
+    }
+  };
+
+  // Fetch available time slots for selected court and date
+  const fetchAvailableTimeSlots = async (courtId, date) => {
+    if (!courtId || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    try {
+      setLoadingTimeSlots(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:3001/api/hearings/available-slots/${courtId}/${date}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAvailableTimeSlots(response.data.availableSlots);
+    } catch (err) {
+      console.error("Error fetching available time slots:", err);
+      setAvailableTimeSlots([]);
+      // Don't show error for this as it's not critical
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  };
+
   useEffect(() => {
     const fetchCases = async () => {
       try {
         setLoading(true);
-        // In a real application, we would fetch data from the API
-        // For now, we're using the mock data defined above
-        setFilteredCases(cases);
+        const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        // Fetch cases from the API
+        const response = await axios.get("http://localhost:3001/api/case", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Fetch hearings for the judge
+        const hearingsResponse = await axios.get(
+          "http://localhost:3001/api/hearings",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // Create a map of case ID to hearing data
+        const hearingsMap = {};
+        hearingsResponse.data.forEach((hearing) => {
+          const caseId = hearing.case?._id || hearing.case;
+          if (caseId) {
+            hearingsMap[caseId] = {
+              date: hearing.date.split("T")[0], // Convert to YYYY-MM-DD format
+              time: hearing.time,
+              location: hearing.court?.name || "TBD",
+              court: hearing.court,
+              hearingId: hearing._id,
+            };
+          }
+        });
+
+        // Transform backend data to match frontend structure
+        const transformedCases = response.data.map((caseItem) => ({
+          id: caseItem._id,
+          title: caseItem.title,
+          caseNumber: caseItem._id.slice(-8).toUpperCase(),
+          type: "General", // Backend doesn't have type field
+          status: caseItem.status,
+          date: new Date(caseItem.createdAt).toLocaleDateString(),
+          scheduledHearing: hearingsMap[caseItem._id] || null,
+        }));
+
+        setCases(transformedCases);
+        console.log("Judge Cases - Loaded cases:", transformedCases);
+
+        // Add test data if no cases are loaded
+        if (transformedCases.length === 0) {
+          const testCases = [
+            {
+              id: "JUDGE001",
+              title: "Judge Test Case 1",
+              caseNumber: "JTC001",
+              type: "Civil",
+              date: "2024-01-15",
+              status: "Open",
+              scheduledHearing: null,
+            },
+            {
+              id: "JUDGE002",
+              title: "Judge Test Case 2",
+              caseNumber: "JTC002",
+              type: "Criminal",
+              date: "2024-01-16",
+              status: "In Progress",
+              scheduledHearing: null,
+            },
+          ];
+          setCases(testCases);
+          console.log("Judge Cases - Using test data:", testCases);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Error fetching cases:", err);
@@ -143,17 +216,82 @@ const JudgeCases = () => {
     };
 
     fetchCases();
-  }, [cases]);
+    fetchCourts();
+  }, []);
 
-  const handleActionClick = (caseId) => {
+  // Fetch available time slots when court or date changes
+  useEffect(() => {
+    if (selectedCourt && hearingDate) {
+      fetchAvailableTimeSlots(selectedCourt, hearingDate);
+    }
+  }, [selectedCourt, hearingDate]);
+
+  // Close any open menus when clicking outside and handle escape key
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Simple approach: only close if clicking outside the table
+      const table = document.querySelector("table");
+      if (table && !table.contains(event.target)) {
+        setActionMenuOpen(null);
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === "Escape") {
+        setActionMenuOpen(null);
+        if (showStatusModal) {
+          setShowStatusModal(false);
+        }
+        if (showHearingModal) {
+          setShowHearingModal(false);
+        }
+      }
+    };
+
+    // Add a small delay to prevent immediate closing
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("click", handleClickOutside);
+      document.addEventListener("keydown", handleEscapeKey);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
+    };
+  }, [showStatusModal, showHearingModal]);
+
+  const handleActionClick = (caseId, event) => {
+    console.log(
+      "Judge page - Toggle action menu for case:",
+      caseId,
+      "Current open:",
+      actionMenuOpen
+    );
     if (actionMenuOpen === caseId) {
       setActionMenuOpen(null);
+      setDropdownPosition(null);
     } else {
       setActionMenuOpen(caseId);
+      // Calculate position relative to the button
+      const rect = event.currentTarget.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
     }
   };
 
   const openStatusModal = (caseItem) => {
+    // Check if case is closed
+    if (caseItem.status === "Closed") {
+      showError(
+        "Cannot change status of closed case. Closed cases are final and cannot be reopened."
+      );
+      setActionMenuOpen(null);
+      return;
+    }
+
     setSelectedCase(caseItem);
     setNewStatus(caseItem.status);
     setShowStatusModal(true);
@@ -161,59 +299,175 @@ const JudgeCases = () => {
   };
 
   const openHearingModal = (caseItem) => {
+    // Check if case is closed
+    if (caseItem.status === "Closed") {
+      showError(
+        "Cannot schedule hearing for closed case. Only open or in-progress cases can have hearings scheduled."
+      );
+      setActionMenuOpen(null);
+      return;
+    }
+
     setSelectedCase(caseItem);
     setHearingDate("");
     setHearingTime("");
-    setHearingLocation("");
+    setSelectedCourt("");
     setShowHearingModal(true);
     setActionMenuOpen(null);
   };
 
-  const handleStatusChange = () => {
+  const handleStatusChange = async () => {
     if (!selectedCase || !newStatus) return;
 
-    // Update the case status
-    const updatedCases = cases.map((caseItem) => {
-      if (caseItem.id === selectedCase.id) {
-        return { ...caseItem, status: newStatus };
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
       }
-      return caseItem;
-    });
 
-    setCases(updatedCases);
-    setShowStatusModal(false);
+      await axios.put(
+        `http://localhost:3001/api/case/status/${selectedCase.id}`,
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // Update the case status in local state
+      const updatedCases = cases.map((caseItem) => {
+        if (caseItem.id === selectedCase.id) {
+          return { ...caseItem, status: newStatus };
+        }
+        return caseItem;
+      });
+
+      setCases(updatedCases);
+      setShowStatusModal(false);
+      showSuccess("Case status updated successfully!");
+    } catch (err) {
+      console.error("Error updating case status:", err);
+
+      // Handle specific error types
+      if (
+        err.response?.status === 400 &&
+        err.response.data.error?.includes("closed case")
+      ) {
+        showError(
+          err.response.data.details ||
+            err.response.data.error ||
+            "Cannot change status of closed case. Closed cases are final and cannot be reopened.",
+          6000
+        );
+      } else {
+        showError(
+          err.response?.data?.error ||
+            "Failed to update case status. Please try again."
+        );
+      }
+    }
   };
 
-  const handleScheduleHearing = () => {
-    if (!selectedCase || !hearingDate || !hearingTime || !hearingLocation)
-      return;
+  const handleScheduleHearing = async () => {
+    if (!selectedCase || !hearingDate || !hearingTime || !selectedCourt) return;
 
-    // Update the case with the scheduled hearing
-    const updatedCases = cases.map((caseItem) => {
-      if (caseItem.id === selectedCase.id) {
-        return {
-          ...caseItem,
-          scheduledHearing: {
-            date: hearingDate,
-            time: hearingTime,
-            location: hearingLocation,
-          },
-        };
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
       }
-      return caseItem;
-    });
 
-    setCases(updatedCases);
+      // Find the selected court details
+      const selectedCourtData = availableCourts.find(
+        (court) => court._id === selectedCourt
+      );
 
-    // Show success message
-    alert(
-      `Hearing scheduled for ${selectedCase.title} on ${hearingDate} at ${hearingTime} in ${hearingLocation}`
-    );
+      const hearingData = {
+        date: hearingDate,
+        time: hearingTime,
+        notes: `Hearing scheduled in ${
+          selectedCourtData?.name || "Selected Court"
+        }`,
+        courtId: selectedCourt,
+      };
 
-    setShowHearingModal(false);
+      await axios.post(
+        `http://localhost:3001/api/hearings/create/${selectedCase.id}`,
+        hearingData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-    // Switch to the scheduled tab to show the newly scheduled case
-    setActiveTab("scheduled");
+      // Update the case with the scheduled hearing in local state
+      const updatedCases = cases.map((caseItem) => {
+        if (caseItem.id === selectedCase.id) {
+          return {
+            ...caseItem,
+            scheduledHearing: {
+              date: hearingDate,
+              time: hearingTime,
+              location: selectedCourtData?.name || "Selected Court",
+              court: selectedCourtData,
+            },
+          };
+        }
+        return caseItem;
+      });
+
+      setCases(updatedCases);
+
+      // Show success message
+      showSuccess(
+        `Hearing successfully scheduled for "${
+          selectedCase.title
+        }" on ${new Date(
+          hearingDate
+        ).toLocaleDateString()} at ${hearingTime} in ${
+          selectedCourtData?.name || "Selected Court"
+        }`,
+        6000 // Show for 6 seconds since it's a longer message
+      );
+
+      setShowHearingModal(false);
+
+      // Switch to the scheduled tab to show the newly scheduled case
+      setActiveTab("scheduled");
+    } catch (err) {
+      console.error("Error scheduling hearing:", err);
+
+      // Handle specific error types
+      if (err.response?.status === 409) {
+        showError(
+          err.response.data.details ||
+            err.response.data.error ||
+            "Scheduling conflict detected. Please choose a different time or courtroom.",
+          8000 // Show longer for conflict messages
+        );
+      } else if (
+        err.response?.status === 400 &&
+        err.response.data.error?.includes("closed case")
+      ) {
+        showError(
+          err.response.data.details ||
+            err.response.data.error ||
+            "Cannot schedule hearing for closed case. Only open or in-progress cases can have hearings scheduled.",
+          6000
+        );
+      } else {
+        showError(
+          err.response?.data?.error ||
+            "Failed to schedule hearing. Please try again."
+        );
+      }
+    }
   };
 
   const getStatusClass = (status) => {
@@ -240,7 +494,7 @@ const JudgeCases = () => {
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 w-[523px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
+        <div className="mb-6 w-[680px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
           <div className="flex border-b p-2">
             <button
               className={`py-3 px-8 text-center font-medium transition-all  ${
@@ -261,6 +515,16 @@ const JudgeCases = () => {
               onClick={() => setActiveTab("open")}
             >
               Open
+            </button>
+            <button
+              className={`py-3 px-8 text-center font-medium transition-all  ${
+                activeTab === "in progress"
+                  ? "bg-white rounded-lg"
+                  : "border-transparent text-gray-500"
+              }`}
+              onClick={() => setActiveTab("in progress")}
+            >
+              In Progress
             </button>
             <button
               className={`py-3 px-8 text-center font-medium transition-all  ${
@@ -302,19 +566,23 @@ const JudgeCases = () => {
         {filteredCases.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <h2 className="text-xl font-medium text-gray-700 mb-2">
-              No Cases Found
+              {activeTab === "scheduled"
+                ? "No Scheduled Cases"
+                : "No Cases Found"}
             </h2>
             <p className="text-gray-500 mb-6">
-              No cases match your search criteria.
+              {activeTab === "scheduled"
+                ? "No cases have hearings scheduled yet. Schedule a hearing for your cases to see them here."
+                : "No cases match your search criteria."}
             </p>
             <button
               onClick={() => {
                 setActiveTab("all");
                 setSearchTerm("");
               }}
-              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors inline-block"
+              className="bg-tertiary text-white px-6 py-2 rounded-md hover:scale-95 shadow-400 ease-in-out duration-300 inline-block"
             >
-              Clear Filters
+              {activeTab === "scheduled" ? "View All Cases" : "Clear Filters"}
             </button>
           </div>
         ) : (
@@ -334,6 +602,11 @@ const JudgeCases = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
+                  {activeTab === "scheduled" && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Hearing Details
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
@@ -371,6 +644,36 @@ const JudgeCases = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {caseItem.date}
                     </td>
+                    {activeTab === "scheduled" && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {caseItem.scheduledHearing ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center">
+                              <FaCalendarAlt className="mr-1 text-green-600" />
+                              <span className="font-medium">
+                                {new Date(
+                                  caseItem.scheduledHearing.date
+                                ).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <FaClock className="mr-1 text-blue-600" />
+                              <span>{caseItem.scheduledHearing.time}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <FaMapMarkerAlt className="mr-1 text-purple-600" />
+                              <span className="text-xs">
+                                {caseItem.scheduledHearing.location}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            No hearing scheduled
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(
@@ -381,67 +684,196 @@ const JudgeCases = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium relative">
-                      <button
-                        onClick={() => handleActionClick(caseItem.id)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <FaEllipsisH />
-                      </button>
-
-                      {actionMenuOpen === caseItem.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                          <div className="py-1">
-                            <button
-                              onClick={() => openStatusModal(caseItem)}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Change Status
-                            </button>
-                            <button
-                              onClick={() => openHearingModal(caseItem)}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Schedule Hearing
-                            </button>
-                            <Link
-                              to={`/judge/cases/${caseItem.id}`}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              View Details
-                            </Link>
-                          </div>
-                        </div>
-                      )}
+                      <div className="relative inline-block text-left">
+                        <button
+                          data-action-button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(caseItem.id, e);
+                          }}
+                          className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+                          title="Actions"
+                        >
+                          <FaEllipsisV />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* Dropdown Menu - Rendered outside table to avoid overflow issues */}
+            {actionMenuOpen && dropdownPosition && (
+              <div
+                data-dropdown-menu
+                className="fixed bg-white rounded-md shadow-xl border-2 border-red-500 overflow-hidden"
+                style={{
+                  zIndex: 9999,
+                  width: "192px",
+                  top: `${dropdownPosition.top}px`,
+                  right: `${dropdownPosition.right}px`,
+                }}
+              >
+                <div className="py-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      if (selectedCase) openStatusModal(selectedCase);
+                    }}
+                    disabled={(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed";
+                    })()}
+                    className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed"
+                        ? "text-gray-400 cursor-not-allowed bg-gray-50"
+                        : "text-gray-700 hover:bg-gray-100";
+                    })()}`}
+                    title={(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed"
+                        ? "Cannot change status of closed case"
+                        : "Change the status of this case";
+                    })()}
+                  >
+                    <FaEdit
+                      className={`mr-2 ${(() => {
+                        const selectedCase = filteredCases.find(
+                          (c) => c.id === actionMenuOpen
+                        );
+                        return selectedCase?.status === "Closed"
+                          ? "text-gray-400"
+                          : "text-blue-600";
+                      })()}`}
+                    />
+                    Change Status
+                    {(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed" ? (
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Case Closed)
+                        </span>
+                      ) : null;
+                    })()}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      if (selectedCase) openHearingModal(selectedCase);
+                    }}
+                    disabled={(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed";
+                    })()}
+                    className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed"
+                        ? "text-gray-400 cursor-not-allowed bg-gray-50"
+                        : "text-gray-700 hover:bg-gray-100";
+                    })()}`}
+                    title={(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed"
+                        ? "Cannot schedule hearing for closed case"
+                        : "Schedule a hearing for this case";
+                    })()}
+                  >
+                    <FaCalendarAlt
+                      className={`mr-2 ${(() => {
+                        const selectedCase = filteredCases.find(
+                          (c) => c.id === actionMenuOpen
+                        );
+                        return selectedCase?.status === "Closed"
+                          ? "text-gray-400"
+                          : "text-purple-600";
+                      })()}`}
+                    />
+                    Schedule Hearing
+                    {(() => {
+                      const selectedCase = filteredCases.find(
+                        (c) => c.id === actionMenuOpen
+                      );
+                      return selectedCase?.status === "Closed" ? (
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Case Closed)
+                        </span>
+                      ) : null;
+                    })()}
+                  </button>
+                  <Link
+                    to={`/judge/cases/${actionMenuOpen}`}
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <FaEye className="mr-2 text-green-600" />
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Status Change Modal */}
         {showStatusModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">Change Case Status</h2>
-              <p className="mb-4 text-gray-600">
-                Update the status for case:{" "}
-                <span className="font-medium">{selectedCase?.title}</span>
-              </p>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Change Case Status
+                </h2>
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ×
+                </button>
+              </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Status
+              <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm text-gray-600">Case:</p>
+                <p className="font-medium text-gray-900">
+                  {selectedCase?.title}
+                </p>
+                <p className="text-xs text-gray-500">
+                  ID: {selectedCase?.caseNumber}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Status *
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Urgent">Urgent</option>
+                  <option value="">-- Select Status --</option>
+                  <option value="Open">Open</option>
+                  <option value="In Progress">In Progress</option>
                   <option value="Closed">Closed</option>
                 </select>
               </div>
@@ -449,7 +881,7 @@ const JudgeCases = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowStatusModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
@@ -466,61 +898,129 @@ const JudgeCases = () => {
 
         {/* Schedule Hearing Modal */}
         {showHearingModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">Schedule Hearing</h2>
-              <p className="mb-4 text-gray-600">
-                Schedule a hearing for case:{" "}
-                <span className="font-medium">{selectedCase?.title}</span>
-              </p>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Schedule Hearing
+                </h2>
+                <button
+                  onClick={() => setShowHearingModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm text-gray-600">Case:</p>
+                <p className="font-medium text-gray-900">
+                  {selectedCase?.title}
+                </p>
+                <p className="text-xs text-gray-500">
+                  ID: {selectedCase?.caseNumber}
+                </p>
+              </div>
 
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Date
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date *
                 </label>
                 <input
                   type="date"
                   value={hearingDate}
                   onChange={(e) => setHearingDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
 
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Time
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Time *
+                  {selectedCourt && hearingDate && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({availableTimeSlots.length} slots available)
+                    </span>
+                  )}
                 </label>
-                <input
-                  type="time"
-                  value={hearingTime}
-                  onChange={(e) => setHearingTime(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                />
+                {selectedCourt &&
+                hearingDate &&
+                availableTimeSlots.length > 0 ? (
+                  <select
+                    value={hearingTime}
+                    onChange={(e) => setHearingTime(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    disabled={loadingTimeSlots}
+                  >
+                    <option value="">-- Select available time --</option>
+                    {availableTimeSlots.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                ) : selectedCourt &&
+                  hearingDate &&
+                  availableTimeSlots.length === 0 &&
+                  !loadingTimeSlots ? (
+                  <div className="w-full border border-red-300 rounded-md px-3 py-2 bg-red-50 text-red-700 text-sm">
+                    No available time slots for this date. Please choose a
+                    different date or courtroom.
+                  </div>
+                ) : (
+                  <input
+                    type="time"
+                    value={hearingTime}
+                    onChange={(e) => setHearingTime(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder={
+                      selectedCourt && hearingDate
+                        ? "Loading available times..."
+                        : "Select court and date first"
+                    }
+                    disabled={loadingTimeSlots}
+                  />
+                )}
+                {loadingTimeSlots && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Loading available time slots...
+                  </div>
+                )}
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Location
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Courtroom *
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Courtroom 302"
-                  value={hearingLocation}
-                  onChange={(e) => setHearingLocation(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                />
+                <select
+                  value={selectedCourt}
+                  onChange={(e) => setSelectedCourt(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">-- Select a courtroom --</option>
+                  {availableCourts.map((court) => (
+                    <option key={court._id} value={court._id}>
+                      {court.name} - {court.location} ({court.type})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowHearingModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleScheduleHearing}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  disabled={!hearingDate || !hearingTime || !selectedCourt}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    !hearingDate || !hearingTime || !selectedCourt
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
                 >
                   Schedule
                 </button>
@@ -528,6 +1028,13 @@ const JudgeCases = () => {
             </div>
           </div>
         )}
+
+        {/* Toast Container */}
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="top-right"
+      />
       </JudgeLayout>
     </section>
   );
