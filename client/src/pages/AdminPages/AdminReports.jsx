@@ -1,12 +1,23 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
-import { FaFileAlt, FaCalendarAlt, FaInfoCircle } from "react-icons/fa";
+import {
+  FaFileAlt,
+  FaCalendarAlt,
+  FaInfoCircle,
+  FaTrash,
+} from "react-icons/fa";
+import { reportsAPI } from "../../services/api";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
 
 const AdminReports = () => {
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reports, setReports] = useState([]);
+  const [formErrors, setFormErrors] = useState({});
 
   // Form state
   const [reportTitle, setReportTitle] = useState("");
@@ -24,39 +35,138 @@ const AdminReports = () => {
     { id: 5, name: "Performance Metrics" },
   ];
 
+  // Fetch reports from backend
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
+        const response = await reportsAPI.getReports();
+        setReports(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching reports:", err);
+        setError("Failed to load reports. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  // Validate form
+  const validateForm = () => {
+    const errors = {};
+
+    if (!reportTitle.trim()) {
+      errors.reportTitle = "Report title is required";
+    }
+
+    if (!reportType) {
+      errors.reportType = "Please select a report type";
+    }
+
+    if (!caseNumber.trim()) {
+      errors.caseNumber = "Case number is required";
+    }
+
+    if (!reportDescription.trim()) {
+      errors.reportDescription = "Report description is required";
+    } else if (reportDescription.trim().length < 10) {
+      errors.reportDescription =
+        "Description must be at least 10 characters long";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate form
-    if (!reportTitle || !reportType || !caseNumber || !reportDescription) {
-      alert("Please fill in all required fields");
+    if (!validateForm()) {
+      showError("Please fix the form errors before submitting");
       return;
     }
 
-    // In a real application, we would make an API call to create the report
-    // For now, we'll just add it to our local state
-    const newReport = {
-      id: Date.now(),
-      title: reportTitle,
-      type: reportType,
-      caseNumber,
-      date: reportDate || new Date().toISOString().split("T")[0],
-      description: reportDescription,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      setSubmitLoading(true);
 
-    setReports([newReport, ...reports]);
+      // Create report data
+      const reportData = {
+        title: reportTitle.trim(),
+        type: reportType,
+        caseNumber: caseNumber.trim(),
+        date: reportDate || new Date().toISOString().split("T")[0],
+        description: reportDescription.trim(),
+      };
 
-    // Reset form
-    setReportTitle("");
-    setReportType("");
-    setCaseNumber("");
-    setReportDate("");
-    setReportDescription("");
+      // Make API call to create the report
+      const response = await reportsAPI.createReport(reportData);
 
-    alert("Report submitted successfully!");
+      // Add new report to the list
+      setReports([response.data, ...reports]);
+
+      // Reset form
+      setReportTitle("");
+      setReportType("");
+      setCaseNumber("");
+      setReportDate("");
+      setReportDescription("");
+      setFormErrors({});
+
+      showSuccess("Report created successfully!");
+    } catch (error) {
+      console.error("Error creating report:", error);
+      showError(
+        error.response?.data?.message ||
+          "Failed to create report. Please try again."
+      );
+    } finally {
+      setSubmitLoading(false);
+    }
   };
+
+  // Handle report deletion
+  const handleDeleteReport = async (reportId) => {
+    if (!window.confirm("Are you sure you want to delete this report?")) {
+      return;
+    }
+
+    try {
+      await reportsAPI.deleteReport(reportId);
+      setReports(reports.filter((report) => report._id !== reportId));
+      alert("Report deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      alert("Failed to delete report. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading reports...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <section>
@@ -78,27 +188,33 @@ const AdminReports = () => {
               </p>
 
               <form onSubmit={handleSubmit}>
-                <div className="mb-4 relative">
+                <div className="mb-4">
                   <input
                     type="text"
-                    className="peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    placeholder="Enter report title"
+                    className={`w-full p-2 border rounded-md ${
+                      formErrors.reportTitle
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-green-500"
+                    } focus:outline-none focus:ring-2`}
                     value={reportTitle}
                     onChange={(e) => setReportTitle(e.target.value)}
                   />
-
-                  <label
-                    htmlFor="title"
-                    className={`absolute left-6 text-gray-500 duration-200 transition-all top-2.5 peer-focus:text-tertiary peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 "
-                    `}
-                  >
-                    Enter Report Title
-                  </label>
+                  {formErrors.reportTitle && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {formErrors.reportTitle}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <select
-                      className="w-full py-4 px-5 text-gray-500 border border-gray-300 rounded-md focus:ring-1 focus:ring-tertiary"
+                      className={`w-full p-2 border rounded-md ${
+                        formErrors.reportType
+                          ? "border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:ring-tertiary"
+                      } focus:outline-none focus:ring-1`}
                       value={reportType}
                       onChange={(e) => setReportType(e.target.value)}
                     >
@@ -109,28 +225,37 @@ const AdminReports = () => {
                         </option>
                       ))}
                     </select>
+                    {formErrors.reportType && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {formErrors.reportType}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 relative">
-                    <input
-                      type="text"
-                      className="peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary"
-                      value={caseNumber}
-                      onChange={(e) => setCaseNumber(e.target.value)}
-                    />
-
-                    <label
-                      htmlFor="title"
-                      className={`absolute left-2 text-gray-500 duration-200 transition-all top-2.5 peer-focus:text-tertiary peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 "
-                    `}
-                    >
-                      Enter Case No
-                    </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Enter case no"
+                        className={`w-full p-2 border rounded-md ${
+                          formErrors.caseNumber
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-tertiary"
+                        } focus:outline-none focus:ring-1`}
+                        value={caseNumber}
+                        onChange={(e) => setCaseNumber(e.target.value)}
+                      />
+                      {formErrors.caseNumber && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {formErrors.caseNumber}
+                        </p>
+                      )}
+                    </div>
 
                     <div className="relative">
                       <input
                         type="date"
-                        className="w-full py-4 px-1 border border-gray-300 rounded-md"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
                         value={reportDate}
                         onChange={(e) => setReportDate(e.target.value)}
                       />
@@ -139,27 +264,31 @@ const AdminReports = () => {
                   </div>
                 </div>
 
-                <div className="mb-4 relative">
+                <div className="mb-4">
                   <textarea
-                    className="peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary h-44"
+                    placeholder="Enter detailed report description"
+                    className={`w-full p-2 border rounded-md h-32 ${
+                      formErrors.reportDescription
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-tertiary"
+                    } focus:outline-none focus:ring-1`}
                     value={reportDescription}
                     onChange={(e) => setReportDescription(e.target.value)}
                   ></textarea>
-                  <label
-                    htmlFor="title"
-                    className={`absolute left-6 text-gray-500 duration-200 transition-all top-2.5 peer-focus:text-tertiary peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 "
-                    `}
-                  >
-                    Enter detailed report description
-                  </label>
+                  {formErrors.reportDescription && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {formErrors.reportDescription}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="bg-tertiary text-primary px-7 py-3 w-ful rounded-lg text-lg shadow-400 hover:shadow ease-in-out duration-300"
+                    disabled={submitLoading}
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Submit Report
+                    {submitLoading ? "Submitting..." : "Submit Report"}
                   </button>
                 </div>
               </form>
@@ -250,7 +379,7 @@ const AdminReports = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {reports.map((report) => (
-                    <tr key={report.id}>
+                    <tr key={report._id || report.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {report.title}
@@ -267,13 +396,21 @@ const AdminReports = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(report.date).toLocaleDateString()}
+                        {new Date(
+                          report.date || report.createdAt
+                        ).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button className="text-green-600 hover:text-green-900 mr-3">
                           View
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button
+                          onClick={() =>
+                            handleDeleteReport(report._id || report.id)
+                          }
+                          className="text-red-600 hover:text-red-900 flex items-center"
+                        >
+                          <FaTrash className="mr-1" />
                           Delete
                         </button>
                       </td>

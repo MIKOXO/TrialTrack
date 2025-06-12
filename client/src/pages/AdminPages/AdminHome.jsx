@@ -25,6 +25,12 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
+import {
+  casesAPI,
+  authAPI,
+  hearingsAPI,
+  analyticsAPI,
+} from "../../services/api";
 
 // Register ChartJS components
 ChartJS.register(
@@ -40,73 +46,52 @@ ChartJS.register(
 const AdminHome = () => {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({
-    totalCases: 145,
-    activeUsers: 55,
-    pendingCases: 18,
-    urgentCases: 5,
+    totalCases: 0,
+    activeUsers: 0,
+    pendingCases: 0,
+    urgentCases: 0,
   });
 
-  const [upcomingHearings, setUpcomingHearings] = useState([
-    {
-      id: 1,
-      title: "Smith vs. Johnson - Initial Hearing",
-      date: "Oct 20",
-      time: "10:30 AM",
-      location: "CourtRoom 3A",
-      judge: "Hon Reynolds",
-    },
-    {
-      id: 2,
-      title: "John vs. Williams - Sentencing",
-      date: "Nov 20",
-      time: "9:30 AM",
-      location: "CourtRoom 7A",
-      judge: "Hon Thompson",
-    },
-    {
-      id: 3,
-      title: "Jane vs. Morgan - Initial Hearing",
-      date: "Feb 20",
-      time: "8:30 AM",
-      location: "CourtRoom 3A",
-      judge: "Hon Reynolds",
-    },
-  ]);
-
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      id: 1,
-      type: "new_case",
-      title: "Filed new case",
-      details: "Smith vs. Johnson",
-      date: "Today",
-    },
-    {
-      id: 2,
-      type: "hearing",
-      title: "Scheduled hearing",
-      details: "Case #1234",
-      date: "Yesterday",
-    },
-  ]);
-
+  const [upcomingHearings, setUpcomingHearings] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [chartData, setChartData] = useState({
+    monthlyStats: [],
+    statusDistribution: {},
+  });
 
-  // Chart data for case statistics
+  // Chart data for case statistics - dynamic
   const caseChartData = {
-    labels: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"],
+    labels: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
     datasets: [
       {
         label: "Active Cases",
-        data: [90, 10, 85, 25, 65, 30, 85, 90, 40, 10, 30, 85],
-        backgroundColor: "rgb(0, 128, 0)",
+        data: chartData.monthlyStats.map((stat) => stat.activeCases || 0),
+        backgroundColor: "rgba(34, 197, 94, 0.8)",
+        borderColor: "rgba(34, 197, 94, 1)",
+        borderWidth: 1,
         barThickness: 15,
       },
       {
         label: "Pending Cases",
-        data: [10, 5, 35, 20, 40, 60, 75, 40, 20, 15, 25, 40],
-        backgroundColor: "rgb(135, 206, 235)",
+        data: chartData.monthlyStats.map((stat) => stat.pendingCases || 0),
+        backgroundColor: "rgba(251, 191, 36, 0.8)",
+        borderColor: "rgba(251, 191, 36, 1)",
+        borderWidth: 1,
         barThickness: 15,
       },
     ],
@@ -118,9 +103,8 @@ const AdminHome = () => {
     scales: {
       y: {
         beginAtZero: true,
-        max: 100,
         ticks: {
-          stepSize: 30,
+          stepSize: 1,
         },
       },
       x: {
@@ -131,25 +115,35 @@ const AdminHome = () => {
     },
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: "top",
       },
     },
   };
 
-  // Pie chart data for case status
+  // Pie chart data for case status - dynamic
   const pieChartData = {
-    labels: ["Pending", "Active", "Closed", "Urgent", "Archived"],
+    labels: ["Open", "In Progress", "Closed"],
     datasets: [
       {
-        data: [25, 40, 20, 10, 5],
-        backgroundColor: [
-          "rgb(255, 205, 86)", // Pending - yellow
-          "rgb(54, 162, 235)", // Active - blue
-          "rgb(0, 128, 0)", // Closed - green
-          "rgb(255, 99, 132)", // Urgent - red
-          "rgb(201, 203, 207)", // Archived - gray
+        data: [
+          chartData.statusDistribution.Open || 0,
+          chartData.statusDistribution["In Progress"] ||
+            chartData.statusDistribution["In-progress"] ||
+            0,
+          chartData.statusDistribution.Closed || 0,
         ],
-        borderWidth: 0,
+        backgroundColor: [
+          "rgba(251, 191, 36, 0.8)", // Open - yellow
+          "rgba(59, 130, 246, 0.8)", // In Progress - blue
+          "rgba(34, 197, 94, 0.8)", // Closed - green
+        ],
+        borderColor: [
+          "rgba(251, 191, 36, 1)",
+          "rgba(59, 130, 246, 1)",
+          "rgba(34, 197, 94, 1)",
+        ],
+        borderWidth: 1,
       },
     ],
   };
@@ -159,35 +153,145 @@ const AdminHome = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: "right",
       },
     },
     cutout: "70%",
   };
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       setLoading(true);
-  //       // In a real application, we would fetch data from the API
-  //       // For now, we're using the mock data defined above
-  //       setLoading(false);
-  //     } catch (err) {
-  //       console.error("Error fetching dashboard data:", err);
-  //       setError("Failed to load dashboard data. Please try again later.");
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, []);
-
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch analytics data
+        let analytics = {
+          monthlyStats: Array(12).fill({ activeCases: 0, pendingCases: 0 }),
+          statusDistribution: { Open: 0, "In-progress": 0, Closed: 0 },
+          totalCases: 0,
+          totalUsers: 0,
+          urgentCases: 0,
+        };
+
+        try {
+          const analyticsResponse = await analyticsAPI.getDashboardAnalytics();
+          analytics = analyticsResponse.data;
+        } catch (analyticsError) {
+          console.warn("Could not fetch analytics data:", analyticsError);
+        }
+
+        // Fetch cases data
+        const casesResponse = await casesAPI.getCases();
+        const cases = casesResponse.data;
+
+        // Fetch users data
+        const usersResponse = await authAPI.getUsers();
+        const users = usersResponse.data;
+
+        // Fetch hearings data
+        let hearings = [];
+        try {
+          const hearingsResponse = await hearingsAPI.getHearings();
+          hearings = hearingsResponse.data;
+        } catch (hearingError) {
+          console.warn("Could not fetch hearings:", hearingError);
+        }
+
+        // Set chart data from analytics
+        setChartData({
+          monthlyStats: analytics.monthlyStats,
+          statusDistribution: analytics.statusDistribution,
+        });
+
+        // Calculate stats
+        const totalCases = analytics.totalCases || cases.length;
+        const activeUsers = analytics.totalUsers || users.length;
+        const pendingCases = cases.filter(
+          (c) => c.status === "Open" || c.status === "In-progress"
+        ).length;
+        const urgentCases =
+          analytics.urgentCases ||
+          cases.filter(
+            (c) =>
+              c.status === "Open" &&
+              new Date(c.createdAt) >
+                new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          ).length;
+
+        setStats({
+          totalCases,
+          activeUsers,
+          pendingCases,
+          urgentCases,
+        });
+
+        // Transform hearings for display
+        const upcomingHearingsData = hearings
+          .filter((hearing) => new Date(hearing.date) >= new Date())
+          .slice(0, 3)
+          .map((hearing) => ({
+            id: hearing._id,
+            title: `${hearing.case?.title || "Case"} - Hearing`,
+            date: new Date(hearing.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            }),
+            time: hearing.time,
+            location: hearing.court?.name || "TBD",
+            judge: hearing.judge?.username || "TBD",
+          }));
+
+        setUpcomingHearings(upcomingHearingsData);
+
+        // Update recent activity with real data
+        const recentActivityData = cases
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5)
+          .map((caseItem, index) => ({
+            id: index + 1,
+            title: "New case filed",
+            details: caseItem.title || "Unknown Case",
+            date: new Date(caseItem.createdAt).toLocaleDateString(),
+            type: "case",
+          }));
+
+        setRecentActivity(recentActivityData);
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading dashboard data...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <section>
@@ -238,36 +342,43 @@ const AdminHome = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Statistics Graph */}
           <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-800">
+                Monthly Case Statistics
+              </h3>
+              <p className="text-sm text-gray-600">
+                Cases filed and processed throughout the year
+              </p>
+            </div>
             <div className="h-64">
-              <Bar data={caseChartData} options={chartOptions} />
+              {chartData.monthlyStats.length > 0 ? (
+                <Bar data={caseChartData} options={chartOptions} />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">Loading chart data...</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Pie Chart */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <div className="h-64 flex items-center justify-center">
-              <div className="w-48 h-48 relative">
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-800">
+                Case Status Distribution
+              </h3>
+              <p className="text-sm text-gray-600">
+                Current status breakdown of all cases
+              </p>
+            </div>
+            <div className="h-64">
+              {Object.keys(chartData.statusDistribution).length > 0 ? (
                 <Doughnut data={pieChartData} options={pieChartOptions} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="text-sm text-gray-500">Status</div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">Loading chart data...</p>
                 </div>
-              </div>
-              <div className="ml-4">
-                <div className="flex flex-col space-y-2">
-                  {pieChartData.labels.map((label, index) => (
-                    <div key={index} className="flex items-center">
-                      <div
-                        className="w-3 h-3 rounded-full mr-2"
-                        style={{
-                          backgroundColor:
-                            pieChartData.datasets[0].backgroundColor[index],
-                        }}
-                      ></div>
-                      <span className="text-sm">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

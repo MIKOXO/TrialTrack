@@ -2,51 +2,49 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import { FaSearch, FaEye, FaTrash } from "react-icons/fa";
+import { authAPI } from "../../services/api";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      role: "Client",
-      email: "JohnDoe@example.com",
-      joinDate: "2019-03-02",
-    },
-    {
-      id: 2,
-      name: "Jane Doe",
-      role: "Admin",
-      email: "JaneDoe22@example.com",
-      joinDate: "2022-02-12",
-    },
-    {
-      id: 3,
-      name: "Mike Ross",
-      role: "Judge",
-      email: "MikeRoss12@example.com",
-      joinDate: "2024-12-12",
-    },
-    {
-      id: 4,
-      name: "Jessica Miles",
-      role: "Client",
-      email: "JessMiles@example.com",
-      joinDate: "2024-08-22",
-    },
-    {
-      id: 5,
-      name: "Harvey Specter",
-      role: "Judge",
-      email: "Harvey123@example.com",
-      joinDate: "2020-01-01",
-    },
-  ]);
+  const [users, setUsers] = useState([]);
+  const { toasts, showSuccess, showError, removeToast } = useToast();
 
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All Users");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch users data from backend
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await authAPI.getUsers();
+        const usersData = response.data;
+
+        // Transform users data for display
+        const transformedUsers = usersData.map((user) => ({
+          id: user._id,
+          name: user.username,
+          role: user.role,
+          email: user.email,
+          joinDate: user.createdAt, // Keep as original date string
+        }));
+
+        setUsers(transformedUsers);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+        setError("Failed to load users data. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
@@ -84,12 +82,37 @@ const AdminUsers = () => {
     setShowDeleteModal(true);
   };
 
-  const handleDeleteUser = () => {
-    // In a real app, you would make an API call here
-    const updatedUsers = users.filter((user) => user.id !== selectedUser.id);
-    setUsers(updatedUsers);
-    setShowDeleteModal(false);
-    setSelectedUser(null);
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    // Prevent deletion of current admin user
+    const currentUser = JSON.parse(localStorage.getItem("user"));
+    if (selectedUser.id === currentUser._id) {
+      showError("You cannot delete your own account");
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      // Make API call to delete user
+      await authAPI.deleteProfile(selectedUser.id);
+
+      // Update local state
+      const updatedUsers = users.filter((user) => user.id !== selectedUser.id);
+      setUsers(updatedUsers);
+      setShowDeleteModal(false);
+      setSelectedUser(null);
+
+      showSuccess(`User "${selectedUser.name}" deleted successfully!`);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      showError(
+        error.response?.data?.message ||
+          "Failed to delete user. Please try again."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   // Format date to display in a more readable format
@@ -97,6 +120,30 @@ const AdminUsers = () => {
     const options = { year: "numeric", month: "2-digit", day: "2-digit" };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading users...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <section>
@@ -173,20 +220,6 @@ const AdminUsers = () => {
                 Admins
               </button>
             </div>
-            {/* <div className="flex-grow p-2">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaSearch className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div> */}
           </div>
         </div>
 
@@ -339,15 +372,16 @@ const AdminUsers = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteUser}
-                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                  disabled={deleteLoading}
+                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 ease-in-out duration-300"
                 >
-                  Delete User
+                  {deleteLoading ? "Deleting..." : "Delete User"}
                 </button>
               </div>
             </div>

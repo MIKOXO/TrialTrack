@@ -12,6 +12,15 @@ import {
   FaEdit,
   FaTrashAlt,
 } from "react-icons/fa";
+import { hearingsAPI, casesAPI, courtsAPI } from "../../services/api";
+
+// Format date to YYYY-MM-DD
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const AdminCalendar = () => {
   // State for calendar
@@ -21,54 +30,66 @@ const AdminCalendar = () => {
   const [error, setError] = useState(null);
 
   // State for events/hearings
-  const [events, setEvents] = useState([
-    {
-      id: 1,
-      title: "State vs. John Hearing",
-      date: "2023-03-15",
-      startTime: "9:00AM",
-      endTime: "10:30AM",
-      courtroom: "Courtroom 501",
-      type: "Hearing",
-    },
-    {
-      id: 2,
-      title: "Jane vs. Mike Trial",
-      date: "2023-03-25",
-      startTime: "10:30AM",
-      endTime: "11:00AM",
-      courtroom: "Courtroom 502",
-      type: "Trial",
-    },
-  ]);
+  const [events, setEvents] = useState([]);
 
   // State for courtrooms
-  const [courtrooms, setCourtrooms] = useState([
-    {
-      id: 1,
-      name: "Courtroom 501",
-      location: "5th Floor, East Wing",
-      capacity: 50,
-    },
-    {
-      id: 2,
-      name: "Courtroom 502",
-      location: "5th Floor, West Wing",
-      capacity: 75,
-    },
-    {
-      id: 3,
-      name: "Courtroom 301",
-      location: "3rd Floor, Main Hall",
-      capacity: 100,
-    },
-    {
-      id: 4,
-      name: "Courtroom 302",
-      location: "3rd Floor, South Wing",
-      capacity: 40,
-    },
-  ]);
+  const [courtrooms, setCourtrooms] = useState([]);
+
+  // Fetch data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch hearings
+        try {
+          const hearingsResponse = await hearingsAPI.getHearings();
+          const hearingsData = hearingsResponse.data;
+
+          // Transform hearings for calendar display
+          const transformedEvents = hearingsData.map((hearing) => ({
+            id: hearing._id,
+            title: `${hearing.case?.title || "Case"} - Hearing`,
+            date: new Date(hearing.date).toISOString().split("T")[0],
+            startTime: hearing.time,
+            endTime: hearing.endTime || "TBD",
+            courtroom: hearing.court?.name || "TBD",
+            type: "Hearing",
+          }));
+
+          setEvents(transformedEvents);
+        } catch (hearingError) {
+          console.warn("Could not fetch hearings:", hearingError);
+        }
+
+        // Fetch courts
+        try {
+          const courtsResponse = await courtsAPI.getCourts();
+          const courtsData = courtsResponse.data;
+
+          // Transform courts for display
+          const transformedCourtrooms = courtsData.map((court) => ({
+            id: court._id,
+            name: court.name,
+            location: court.location,
+            capacity: court.capacity || 50,
+          }));
+
+          setCourtrooms(transformedCourtrooms);
+        } catch (courtError) {
+          console.warn("Could not fetch courts:", courtError);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching calendar data:", err);
+        setError("Failed to load calendar data. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Modal states
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -104,14 +125,6 @@ const AdminCalendar = () => {
       new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
     );
   };
-
-  // Format date to YYYY-MM-DD
-  function formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
 
   // Format month and year for display
   function formatMonthYear(date) {
@@ -185,8 +198,23 @@ const AdminCalendar = () => {
       return;
     }
 
+    // Check for time conflicts in the same courtroom
+    const conflictingEvent = events.find(
+      (event) =>
+        event.date === newEvent.date &&
+        event.courtroom === newEvent.courtroom &&
+        event.startTime === newEvent.startTime
+    );
+
+    if (conflictingEvent) {
+      alert(
+        `Time conflict detected! ${newEvent.courtroom} is already booked at ${newEvent.startTime} on ${newEvent.date}`
+      );
+      return;
+    }
+
     const eventToAdd = {
-      id: events.length + 1,
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
       ...newEvent,
     };
 
@@ -200,27 +228,41 @@ const AdminCalendar = () => {
       courtroom: "",
       type: "Hearing",
     });
+
+    alert("Event added successfully!");
   };
 
   // Handle adding a new courtroom
-  const handleAddCourtroom = () => {
+  const handleAddCourtroom = async () => {
     if (!newCourtroom.name || !newCourtroom.location) {
       alert("Please fill in all required fields");
       return;
     }
 
-    const courtroomToAdd = {
-      id: courtrooms.length + 1,
-      ...newCourtroom,
-    };
+    try {
+      const response = await courtsAPI.createCourt(newCourtroom);
+      const createdCourt = response.data;
 
-    setCourtrooms([...courtrooms, courtroomToAdd]);
-    setShowAddCourtroomModal(false);
-    setNewCourtroom({
-      name: "",
-      location: "",
-      capacity: 50,
-    });
+      const courtroomToAdd = {
+        id: createdCourt._id,
+        name: createdCourt.name,
+        location: createdCourt.location,
+        capacity: createdCourt.capacity || 50,
+      };
+
+      setCourtrooms([...courtrooms, courtroomToAdd]);
+      setShowAddCourtroomModal(false);
+      setNewCourtroom({
+        name: "",
+        location: "",
+        capacity: 50,
+      });
+
+      alert("Courtroom created successfully!");
+    } catch (error) {
+      console.error("Error creating courtroom:", error);
+      alert("Failed to create courtroom. Please try again.");
+    }
   };
 
   // Handle editing a courtroom
@@ -283,6 +325,30 @@ const AdminCalendar = () => {
   const calendarDays = generateCalendarDays();
   const eventsByDate = groupEventsByDate();
   const selectedDateEvents = getEventsForSelectedDate();
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading calendar...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <section>
@@ -486,7 +552,7 @@ const AdminCalendar = () => {
 
               <button
                 onClick={openAddEventModal}
-                className="mt-4 w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center"
+                className="mt-4 w-full bg-tertiary text-white px-4 py-2 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center"
               >
                 <FaPlus className="mr-2" /> Add Event
               </button>
@@ -655,13 +721,13 @@ const AdminCalendar = () => {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddEventModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddEvent}
-                  className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                  className="px-4 py-2 rounded-md bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
                 >
                   Add Event
                 </button>
@@ -732,13 +798,13 @@ const AdminCalendar = () => {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddCourtroomModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddCourtroom}
-                  className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                  className="px-4 py-2 rounded-md bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
                 >
                   Add Courtroom
                 </button>
@@ -810,13 +876,13 @@ const AdminCalendar = () => {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowEditCourtroomModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleEditCourtroom}
-                  className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700"
+                  className="px-4 py-2 rounded-md bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
                 >
                   Save Changes
                 </button>
