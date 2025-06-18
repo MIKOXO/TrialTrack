@@ -10,6 +10,7 @@ import {
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import axios from "axios";
+import usePageLoadAnimation from "../hooks/usePageLoadAnimation";
 
 const Signin = () => {
   const location = useLocation();
@@ -23,6 +24,11 @@ const Signin = () => {
   const [serverError, setServerError] = useState("");
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Animation hooks
+  const logoVisible = usePageLoadAnimation(100);
+  const headingVisible = usePageLoadAnimation(300);
+  const formVisible = usePageLoadAnimation(500);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -87,16 +93,32 @@ const Signin = () => {
 
   return (
     <section className="mx-auto container px-7 lg:px-32 mt-10">
-      <div>
+      <div
+        className={`transition-all duration-1000 ease-out ${
+          logoVisible
+            ? "opacity-100 translate-y-0 scale-100"
+            : "opacity-0 -translate-y-10 scale-95"
+        }`}
+      >
         <Logo />
       </div>
 
-      <div className="mt-14 font-Lexend text-center font-light">
+      <div
+        className={`mt-14 font-Lexend text-center font-light transition-all duration-1000 ease-out ${
+          headingVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         <h1 className="text-3xl">Welcome Back!</h1>
         <p className="text-xl mt-2">Please enter log in details below</p>
       </div>
 
-      <div className="font-Lexend mt-10 mx-auto w-full max-w-lg">
+      <div
+        className={`font-Lexend mt-10 mx-auto w-full max-w-lg transition-all duration-1000 ease-out ${
+          formVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <form action="" onSubmit={handleSubmit}>
           <div className="relative my-6">
             <input
@@ -173,7 +195,7 @@ const Signin = () => {
           <button
             disabled={loading}
             type="submit"
-            className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow ease-in-out duration-300"
+            className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow-300 ease-in-out duration-300"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

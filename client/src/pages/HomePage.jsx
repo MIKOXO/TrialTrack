@@ -5,15 +5,32 @@ import IMG5 from "../assets/IMG5.jpg";
 import { Link } from "react-router-dom";
 import Features from "../components/Features";
 import Footer from "../components/Footer";
+import useScrollAnimation from "../hooks/useScrollAnimation";
 
 const HomePage = () => {
+  const [heroRef, heroVisible] = useScrollAnimation();
+  const [secondSectionRef, secondSectionVisible] = useScrollAnimation();
+  const [featuresRef, featuresVisible] = useScrollAnimation();
+  const [ctaRef, ctaVisible] = useScrollAnimation();
+
   return (
     <main>
       <Navbar />
 
-      <section className="mx-auto container px-7 sm:px-32 mt-10 ">
+      <section
+        ref={heroRef}
+        className={`mx-auto container px-7 sm:px-32 mt-10 transition-all duration-1000 ease-out ${
+          heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="font-Lexend flex flex-col-reverse items-center justify-between sm:flex-row">
-          <div>
+          <div
+            className={`transition-all duration-1000 ease-out delay-200 ${
+              heroVisible
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 -translate-x-10"
+            }`}
+          >
             <h1 className="text-3xl text-tertiary text-center w-full sm:text-left lg:text-5xl font-light sm:w-[70%] ">
               Streamline Your Court Cases With Ease
             </h1>
@@ -32,7 +49,13 @@ const HomePage = () => {
             </div>
           </div>
 
-          <div>
+          <div
+            className={`transition-all duration-1000 ease-out delay-400 ${
+              heroVisible
+                ? "opacity-100 translate-x-0 scale-100"
+                : "opacity-0 translate-x-10 scale-95"
+            }`}
+          >
             <img
               src={IMG3}
               className="mb-10 h-[20rem] w-[10rem] sm:h-[28rem] sm:w-[28rem] shadow-500 object-fill rounded-xl sm:mb-0"
@@ -41,16 +64,35 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section className="mx-auto container px-7 sm:px-32 mt-10 lg:mt-44">
+      <section
+        ref={secondSectionRef}
+        className={`mx-auto container px-7 sm:px-32 mt-10 lg:mt-44 transition-all duration-1000 ease-out ${
+          secondSectionVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="font-Lexend flex flex-col items-center justify-between sm:flex-row">
-          <div>
+          <div
+            className={`transition-all duration-1000 ease-out delay-200 ${
+              secondSectionVisible
+                ? "opacity-100 translate-x-0 scale-100"
+                : "opacity-0 -translate-x-10 scale-95"
+            }`}
+          >
             <img
               src={IMG5}
               className="mb-10 h-[20rem] w-[10rem] sm:h-[28rem] sm:w-[44rem] shadow-500 object-fill rounded-xl sm:mb-0"
             />
           </div>
 
-          <div className="lg:ml-44">
+          <div
+            className={`lg:ml-44 transition-all duration-1000 ease-out delay-400 ${
+              secondSectionVisible
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-10"
+            }`}
+          >
             <h1 className="text-3xl text-tertiary text-center w-full sm:text-left lg:text-5xl font-light sm:w-[80%]">
               Effortless Court Case Management
             </h1>
@@ -63,19 +105,43 @@ const HomePage = () => {
         </div>
       </section>
 
-      <section>
+      <section
+        ref={featuresRef}
+        className={`transition-all duration-1000 ease-out ${
+          featuresVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         <Features />
       </section>
 
-      <section className="container mx-auto px-7 sm:px-32 mt-20 lg:mt-44">
+      <section
+        ref={ctaRef}
+        className={`container mx-auto px-7 sm:px-32 mt-20 lg:mt-44 transition-all duration-1000 ease-out ${
+          ctaVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <div className="font-Lexend flex flex-col items-start gap-10 lg:flex-row">
-          <div>
+          <div
+            className={`transition-all duration-1000 ease-out delay-200 ${
+              ctaVisible
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 -translate-x-10"
+            }`}
+          >
             <h1 className="text-3xl text-tertiary text-center w-full sm:text-left lg:text-5xl font-light ">
               Transform Your Court Management Today
             </h1>
           </div>
 
-          <div className="ml-">
+          <div
+            className={`transition-all duration-1000 ease-out delay-400 ${
+              ctaVisible
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-10"
+            }`}
+          >
             <p className="text-secondary text-center sm:text-left sm:w-[90%] font-light">
               Experience the future of court case management with our innovative
               system. Sign up for a demo and discover how we can streamline your

@@ -10,6 +10,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { useNavigate, Link } from "react-router-dom";
 import Logo from "../components/Logo";
+import { validatePasswordStrength } from "../utils/passwordValidation";
+import PasswordRequirements from "../components/PasswordRequirements";
+import usePageLoadAnimation from "../hooks/usePageLoadAnimation";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -19,11 +22,16 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "",
   });
 
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+
+  // Animation hooks
+  const logoVisible = usePageLoadAnimation(100);
+  const headingVisible = usePageLoadAnimation(300);
+  const formVisible = usePageLoadAnimation(500);
 
   const validate = () => {
     const errs = {};
@@ -31,20 +39,33 @@ const Signup = () => {
     if (!form.email) errs.email = "Email is required.";
     else if (!/\S+@\S+\.\S+/.test(form.email))
       errs.email = "Invalid email format.";
-    if (!form.password) errs.password = "Password is required.";
-    else if (form.password.length < 6)
-      errs.password = "Password must be at least 6 characters.";
+
+    // Enhanced password validation
+    if (!form.password) {
+      errs.password = "Password is required.";
+    } else {
+      const passwordValidation = validatePasswordStrength(form.password);
+      if (!passwordValidation.isValid) {
+        errs.password = passwordValidation.errors[0]; // Show first error
+      }
+    }
+
     if (!form.confirmPassword)
       errs.confirmPassword = "Please confirm your password.";
     else if (form.password !== form.confirmPassword)
       errs.confirmPassword = "Passwords do not match.";
-    if (!form.role) errs.role = "Please select a role.";
     return errs;
   };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
+  };
+
+  // Check if all password requirements are met
+  const areAllPasswordRequirementsMet = () => {
+    const passwordValidation = validatePasswordStrength(form.password);
+    return passwordValidation.isValid;
   };
 
   const handleSubmit = async (e) => {
@@ -56,18 +77,16 @@ const Signup = () => {
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
-      const res = await axios.post(
-        "http://localhost:3001/api/auth/register",
-        form
-      );
+      const res = await axios.post("http://localhost:3001/api/auth/register", {
+        ...form,
+        role: "Client",
+      });
       const { token, user } = res.data;
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      if (user.role === "Admin") navigate("/admin/home");
-      else if (user.role === "Client") navigate("/client/home");
-      else if (user.role === "Judge") navigate("/judge/home");
+      navigate("/client/home");
     } catch (err) {
       const msg =
         err.response?.data?.error || "Sign up failed. Please try again.";
@@ -77,11 +96,23 @@ const Signup = () => {
 
   return (
     <section className="mx-auto container pb-10 px-7 lg:px-32 mt-10">
-      <div>
+      <div
+        className={`transition-all duration-1000 ease-out ${
+          logoVisible
+            ? "opacity-100 translate-y-0 scale-100"
+            : "opacity-0 -translate-y-10 scale-95"
+        }`}
+      >
         <Logo />
       </div>
 
-      <div className="mt-10 font-Lexend text-center font-light">
+      <div
+        className={`mt-10 font-Lexend text-center font-light transition-all duration-1000 ease-out ${
+          headingVisible
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-10"
+        }`}
+      >
         <h1 className="text-2xl">Create An Account</h1>
         <p className="text-lg mt-2">Please fill your information</p>
       </div>
@@ -92,7 +123,11 @@ const Signup = () => {
         </div>
       )}
 
-      <div className="font-Lexend mt-5 mx-auto w-full max-w-lg">
+      <div
+        className={`font-Lexend mt-5 mx-auto w-full max-w-lg transition-all duration-1000 ease-out ${
+          formVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
         <form action="" onSubmit={handleSubmit}>
           <div className="relative mb-6">
             <input
@@ -158,6 +193,8 @@ const Signup = () => {
               name="password"
               value={form.password}
               onChange={handleChange}
+              onFocus={() => setIsPasswordFocused(true)}
+              onBlur={() => setIsPasswordFocused(false)}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                 errors.password
                   ? "border-red-500 focus:ring-red-500"
@@ -189,6 +226,13 @@ const Signup = () => {
             {errors.password && (
               <p className="text-sm text-red-500 mt-1">{errors.password}</p>
             )}
+            {!errors.password &&
+              isPasswordFocused &&
+              !areAllPasswordRequirementsMet() && (
+                <div className="transition-all duration-300 ease-in-out opacity-100 translate-y-0">
+                  <PasswordRequirements password={form.password} />
+                </div>
+              )}
           </div>
 
           <div className="relative mb-6">
@@ -232,32 +276,10 @@ const Signup = () => {
             )}
           </div>
 
-          <div>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              style={{ appearance: "none" }}
-              className={`text-gray-500 w-full border rounded-md px-5 py-3 focus:outline-none focus:ring-1 ${
-                errors.role
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:ring-tertiary"
-              }`}
-            >
-              <option value="">Select Role</option>
-              <option value="Client">Client</option>
-              <option value="Judge">Judge</option>
-              <option value="Admin">Admin</option>
-            </select>
-            {errors.role && (
-              <p className="text-sm text-red-500 mt-1">{errors.role}</p>
-            )}
-          </div>
-
           <div className="mt-6">
             <button
               type="submit"
-              className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow ease-in-out duration-300"
+              className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow-300 ease-in-out duration-300"
             >
               Create Account
             </button>
