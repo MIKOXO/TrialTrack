@@ -75,6 +75,24 @@ const NewCaseParties = () => {
       newErrors["defendant.name"] = "Defendant name is required";
     }
 
+    if (!formData.defendant.phone.trim()) {
+      newErrors["defendant.phone"] = "Defendant phone number is required";
+    } else if (
+      !/^[\+]?[1-9][\d]{0,15}$/.test(
+        formData.defendant.phone.replace(/[\s\-\(\)]/g, "")
+      )
+    ) {
+      newErrors["defendant.phone"] = "Please enter a valid phone number";
+    }
+
+    // Email validation (optional but must be valid if provided)
+    if (
+      formData.defendant.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.defendant.email)
+    ) {
+      newErrors["defendant.email"] = "Please enter a valid email address";
+    }
+
     return newErrors;
   };
 
@@ -91,7 +109,7 @@ const NewCaseParties = () => {
       return;
     }
 
-    // Navigate to the next step (documents)
+    // Navigate to the next step (legal details)
     navigate("/client/newcase/legal-details", { state: { formData } });
   };
 
@@ -169,6 +187,19 @@ const NewCaseParties = () => {
             Identify the individuals or entities involved in this case
           </p>
 
+          <div className="bg-tertiary bg-opacity-15 rounded-lg border-l-4 border-green-400 p-4 mb-6">
+            <div className="flex">
+              <div className="ml-3">
+                <p className="text-sm text-tertiary">
+                  <strong>Required Information:</strong> Fields marked with{" "}
+                  <span className="text-red-500">*</span> are required. The
+                  defendant's phone number is mandatory for court notifications
+                  and service of process.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleContinue}>
             <div className="mb-6 relative">
               <input
@@ -231,6 +262,70 @@ const NewCaseParties = () => {
                   {errors["defendant.name"]}
                 </p>
               )}
+            </div>
+
+            <div className="mb-6 relative">
+              <input
+                type="tel"
+                id="defendant.phone"
+                name="defendant.phone"
+                value={formData.defendant.phone}
+                onChange={handleChange}
+                className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                  errors.phone
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-tertiary"
+                }`}
+              />
+              <label
+                htmlFor="defendant.phone"
+                className={`absolute left-5 text-gray-500 duration-200 transition-all ${
+                  formData.defendant.phone
+                    ? " text-base -top-2.5 bg-white px-1"
+                    : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                }`}
+              >
+                Defendant Phone Number <span className="text-red-500">*</span>
+              </label>
+              {errors["defendant.phone"] && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors["defendant.phone"]}
+                </p>
+              )}
+              <p className="text-gray-500 text-sm mt-1">
+                Required for court notifications and service of process
+              </p>
+            </div>
+
+            <div className="mb-6 relative">
+              <input
+                type="email"
+                id="defendant.email"
+                name="defendant.email"
+                value={formData.defendant.email}
+                onChange={handleChange}
+                className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary  border-gray-300 `}
+              />
+
+              <label
+                htmlFor="defendant.email"
+                className={`absolute left-5 text-gray-500 duration-200 transition-all ${
+                  formData.defendant.phone
+                    ? " text-base -top-2.5 bg-white px-1"
+                    : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                }`}
+              >
+                Defendant Email Address{" "}
+                <span className="text-gray-500">(Optional)</span>
+              </label>
+              {errors["defendant.email"] && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors["defendant.email"]}
+                </p>
+              )}
+              <p className="text-gray-500 text-sm mt-1">
+                If provided, will be used for electronic service of documents
+              </p>
             </div>
 
             <div className="mt-8 flex justify-between">

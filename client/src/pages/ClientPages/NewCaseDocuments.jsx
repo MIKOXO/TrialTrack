@@ -79,6 +79,12 @@ const NewCaseDocuments = () => {
   const [uploadProgress, setUploadProgress] = useState({});
   const [dragActive, setDragActive] = useState(false);
 
+  // Duplicate detection state
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+
   // Redirect if no form data
   useEffect(() => {
     if (!location.state?.formData) {
@@ -181,41 +187,54 @@ const NewCaseDocuments = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // setLoading(true);
-    setSubmitError("");
-
-    // Validate compliance fields
-    if (!compliance.verificationStatement) {
-      setSubmitError(
-        "You must verify that the facts stated are true and correct."
-      );
-      return;
-    }
-
-    if (!compliance.perjuryAcknowledgment) {
-      setSubmitError("You must acknowledge the perjury warning.");
-      return;
-    }
-
-    if (!compliance.courtRulesAcknowledgment) {
-      setSubmitError("You must acknowledge understanding of court rules.");
-      return;
-    }
-
-    if (!compliance.electronicSignature.trim()) {
-      setSubmitError("Electronic signature is required.");
-      return;
-    }
-
+  // Check for duplicate cases
+  const checkForDuplicates = async () => {
+    setCheckingDuplicates(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No authentication token found");
+      const duplicateCheckData = {
+        title: formData.title,
+        description: formData.description,
+        defendant: formData.defendant,
+        caseType: formData.caseType,
+        court: formData.court,
+      };
+
+      const response = await casesAPI.checkDuplicates(duplicateCheckData);
+
+      if (response.data.hasDuplicates) {
+        setDuplicateWarning(response.data);
+        setShowDuplicateModal(true);
+        return false; // Don't proceed with filing
       }
 
+      return true; // No duplicates, can proceed
+    } catch (error) {
+      console.error("Error checking duplicates:", error);
+      // If duplicate check fails, allow filing to proceed
+      return true;
+    } finally {
+      setCheckingDuplicates(false);
+    }
+  };
+
+  const handleDuplicateConfirm = () => {
+    setConfirmDuplicate(true);
+    setShowDuplicateModal(false);
+    // Proceed with filing
+    submitCase(true);
+  };
+
+  const handleDuplicateCancel = () => {
+    setShowDuplicateModal(false);
+    setDuplicateWarning(null);
+  };
+
+  const submitCase = async (skipDuplicateCheck = false) => {
+    setLoading(true);
+    setSubmitError("");
+
+    try {
+      // Prepare comprehensive case data for backend API
       const caseData = {
         title: formData.title,
         description: formData.description,
@@ -244,6 +263,7 @@ const NewCaseDocuments = () => {
         },
         reliefSought: formData.reliefSought || {},
         compliance: compliance,
+        confirmDuplicate: skipDuplicateCheck || confirmDuplicate,
       };
 
       console.log("Submitting case data:", caseData);
@@ -254,6 +274,7 @@ const NewCaseDocuments = () => {
       console.log("Case submission response:", response.data);
 
       if (response.status === 201) {
+        setLoading(false);
         setSubmitSuccess(true);
 
         // Redirect after a delay
@@ -264,12 +285,66 @@ const NewCaseDocuments = () => {
     } catch (err) {
       console.error("Error filing case:", err);
       console.error("Error response:", err.response?.data);
+
+      // Handle duplicate case error specifically
+      if (
+        err.response?.status === 409 &&
+        err.response?.data?.requiresConfirmation
+      ) {
+        setDuplicateWarning(err.response.data);
+        setShowDuplicateModal(true);
+        setLoading(false);
+        return;
+      }
+
       setSubmitError(
         err.response?.data?.error ||
           err.response?.data?.details ||
           "Failed to file case. Please try again."
       );
+      setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate compliance fields first
+    if (!compliance.verificationStatement) {
+      setSubmitError(
+        "You must verify that the facts stated are true and correct."
+      );
+      return;
+    }
+
+    if (!compliance.perjuryAcknowledgment) {
+      setSubmitError("You must acknowledge the perjury warning.");
+      return;
+    }
+
+    if (!compliance.courtRulesAcknowledgment) {
+      setSubmitError("You must acknowledge understanding of court rules.");
+      return;
+    }
+
+    if (!compliance.electronicSignature.trim()) {
+      setSubmitError("Electronic signature is required.");
+      return;
+    }
+
+    // Clear any previous errors
+    setSubmitError("");
+
+    // If not already confirmed, check for duplicates first
+    if (!confirmDuplicate) {
+      const canProceed = await checkForDuplicates();
+      if (!canProceed) {
+        return; // Duplicate modal will be shown
+      }
+    }
+
+    // Proceed with case submission
+    await submitCase();
   };
 
   return (
@@ -684,11 +759,124 @@ const NewCaseDocuments = () => {
                 disabled={loading || submitSuccess}
                 className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50"
               >
-                {loading ? "Filing Case..." : "Submit Case"}
+                {checkingDuplicates ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Checking for duplicates...
+                  </>
+                ) : loading ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Filing Case...
+                  </>
+                ) : (
+                  "Submit Case"
+                )}
               </button>
             </div>
           </form>
         </div>
+
+        {/* Duplicate Warning Modal */}
+        {showDuplicateModal && duplicateWarning && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-semibold mb-4 text-red-600 flex items-center">
+                <FaSpinner className="mr-2" />
+                Potential Duplicate Case Detected
+              </h2>
+
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-yellow-800 mb-2">
+                  <strong>Warning:</strong> {duplicateWarning.message}
+                </p>
+                <p className="text-sm text-yellow-700">
+                  Filing duplicate cases may result in case dismissal and could
+                  be considered an abuse of the court system.
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold mb-3 text-gray-800">
+                  Similar Cases Found:
+                </h3>
+                <div className="space-y-3">
+                  {duplicateWarning.duplicates?.map((duplicate, index) => (
+                    <div
+                      key={duplicate.caseId}
+                      className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-gray-900">
+                          {duplicate.title}
+                        </h4>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            duplicate.status === "Open"
+                              ? "bg-green-100 text-green-800"
+                              : duplicate.status === "In Progress"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {duplicate.status}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>Filed:</strong>{" "}
+                        {new Date(duplicate.createdAt).toLocaleDateString()}
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>Similarity Score:</strong>{" "}
+                        {duplicate.similarityScore}%
+                      </div>
+
+                      <div className="text-sm text-gray-600">
+                        <strong>Matching Factors:</strong>
+                        <ul className="list-disc list-inside mt-1">
+                          {duplicate.matchingFactors?.map((factor, idx) => (
+                            <li key={idx}>{factor}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+                <h4 className="font-semibold text-red-800 mb-2">
+                  Before Proceeding:
+                </h4>
+                <ul className="text-sm text-red-700 space-y-1">
+                  <li>• Review the similar cases above carefully</li>
+                  <li>
+                    • Consider if this is truly a new, separate legal matter
+                  </li>
+                  <li>• Ensure you're not filing the same case twice</li>
+                  <li>• If unsure, consult with legal counsel</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={handleDuplicateCancel}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel & Review
+                </button>
+                <button
+                  onClick={handleDuplicateConfirm}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                >
+                  <FaSpinner className="mr-2" />I Understand - File Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </ClientLayout>
     </section>
   );

@@ -48,6 +48,7 @@ export const authAPI = {
   },
   deleteProfile: (id) => api.delete(`/auth/delete/${id}`),
   getUsers: () => api.get("/auth/users"),
+  createJudge: (judgeData) => api.post("/auth/create-judge", judgeData),
 };
 
 // Cases API
@@ -55,6 +56,7 @@ export const casesAPI = {
   getCases: () => api.get("/case"),
   getCaseById: (id) => api.get(`/case/${id}`),
   fileCase: (caseData) => api.post("/case/file", caseData),
+  checkDuplicates: (caseData) => api.post("/case/check-duplicates", caseData),
   assignCase: (caseId, judgeId) =>
     api.put(`/case/assign/${caseId}`, { judgeId }),
   updateCaseStatus: (id, status) => api.put(`/case/status/${id}`, { status }),
@@ -64,6 +66,7 @@ export const casesAPI = {
 // Hearings API
 export const hearingsAPI = {
   getHearings: () => api.get("/hearings"),
+  getClientHearings: () => api.get("/hearings/client"),
   getHearingById: (id) => api.get(`/hearings/${id}`),
   createHearing: (caseId, hearingData) =>
     api.post(`/hearings/create/${caseId}`, hearingData),
@@ -92,6 +95,9 @@ export const notificationsAPI = {
   sendNotification: (notificationData) =>
     api.post("/notifications/send", notificationData),
   markAsRead: (id) => api.put(`/notifications/read/${id}`),
+  deleteNotification: (id) => api.delete(`/notifications/delete/${id}`),
+  bulkDeleteNotifications: (ids) =>
+    api.post("/notifications/bulk-delete", { ids }),
 };
 
 // Documents API
@@ -120,6 +126,18 @@ export const analyticsAPI = {
   getDashboardAnalytics: () => api.get("/analytics/dashboard"),
   getCaseTrends: (year) =>
     api.get(`/analytics/case-trends${year ? `?year=${year}` : ""}`),
+};
+
+// Comments API
+export const commentsAPI = {
+  submitComment: (commentData) => api.post("/comments/submit", commentData),
+  getComments: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/comments${queryString ? `?${queryString}` : ""}`);
+  },
+  updateCommentStatus: (id, statusData) =>
+    api.put(`/comments/status/${id}`, statusData),
+  getCommentStats: () => api.get("/comments/stats"),
 };
 
 export default api;

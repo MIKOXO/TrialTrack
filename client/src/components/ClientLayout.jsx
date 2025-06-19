@@ -16,6 +16,13 @@ const ClientLayout = ({ children }) => {
 
   return (
     <section className="flex h-screen">
+      {/* Mobile sidebar backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-gray-800 bg-opacity-50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -30,7 +37,7 @@ const ClientLayout = ({ children }) => {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-40`}
       >
-        <ClientSidebar />
+        <ClientSidebar closeSidebar={() => setIsSidebarOpen(false)} />
       </div>
 
       <div className="overflow-auto font-Lexend flex-1 ml-0 md:ml-64 transition-all duration-300">

@@ -321,7 +321,7 @@ const NewCaseLegalDetails = () => {
                     />
                     <label
                       className={`absolute left-5 text-gray-500 duration-200 transition-all ${
-                        formData.representation.lawyerName
+                        formData.representation?.lawyerName
                           ? " text-base -top-2.5 bg-white px-1"
                           : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                       }`}
@@ -349,7 +349,7 @@ const NewCaseLegalDetails = () => {
                     />
                     <label
                       className={`absolute left-5 text-gray-500 duration-200 transition-all ${
-                        formData.representation.lawyerBarNumber
+                        formData.representation?.lawyerBarNumber
                           ? " text-base -top-2.5 bg-white px-1"
                           : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                       }`}
@@ -395,7 +395,7 @@ const NewCaseLegalDetails = () => {
                       />
                       <label
                         className={`absolute left-5 text-gray-500 duration-200 transition-all ${
-                          formData.representation.lawyerContact.phone
+                          formData.representation?.lawyerContact?.phone
                             ? " text-base -top-2.5 bg-white px-1"
                             : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                         }`}
@@ -489,7 +489,7 @@ const NewCaseLegalDetails = () => {
               />
               <label
                 className={`absolute left-5 text-gray-500 duration-200 transition-all ${
-                  formData.reliefSought.other
+                  formData.reliefSought?.other
                     ? " text-base -top-2.5 bg-white px-1"
                     : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                 }`}
@@ -512,7 +512,7 @@ const NewCaseLegalDetails = () => {
               />
               <label
                 className={`absolute left-5 text-gray-500 duration-200 transition-all ${
-                  formData.reliefSought.detailedRequest
+                  formData.reliefSought?.detailedRequest
                     ? " text-base -top-2.5 bg-white px-1"
                     : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                 }`}

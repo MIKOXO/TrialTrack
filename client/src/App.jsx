@@ -26,6 +26,7 @@ import CaseDetails from "./pages/ClientPages/CaseDetails";
 import JudgeHearingsPage from "./pages/JudgePages/JudgeHearingsPage";
 import JudgeHearingDetailPage from "./pages/JudgePages/JudgeHearingDetailPage";
 import JudgeCaseDetailPage from "./pages/JudgePages/JudgeCaseDetailPage";
+import ClientFeedback from "./pages/ClientPages/ClientFeedback";
 
 const App = () => {
   return (
@@ -66,6 +67,7 @@ const App = () => {
             path="/client/notifications"
             element={<ClientNotifications />}
           />
+          <Route path="/client/feedback" element={<ClientFeedback />} />
           <Route path="/client/settings" element={<ClientSettings />} />
         </Route>
 
