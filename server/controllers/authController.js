@@ -4,6 +4,10 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
+import {
+  validatePasswordStrength,
+  formatPasswordErrors,
+} from "../utils/passwordValidation.js";
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -22,9 +26,24 @@ const generateToken = (user) => {
 const registerUser = asyncHandler(async (req, res) => {
   const { username, email, password, role } = req.body;
 
-  if (!username || !email || !password || !role) {
+  if (!username || !email || !password) {
     res.status(400);
     throw new Error("Please add all fields");
+  }
+
+  // Validate password strength
+  const passwordValidation = validatePasswordStrength(password);
+  if (!passwordValidation.isValid) {
+    res.status(400);
+    throw new Error(formatPasswordErrors(passwordValidation.errors));
+  }
+
+  // Security: Only allow Client role for public registration
+  // Admin and Judge roles should only be created by existing admins
+  const allowedRole = "Client";
+  if (role && role !== allowedRole) {
+    res.status(403);
+    throw new Error("Unauthorized role assignment");
   }
 
   // Check if user exists
@@ -38,12 +57,12 @@ const registerUser = asyncHandler(async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Create user
+  // Create user with Client role only
   const user = await User.create({
     username,
     email,
     password: hashedPassword,
-    role,
+    role: allowedRole,
   });
 
   if (user) {
@@ -172,6 +191,14 @@ const updateUserProfile = asyncHandler(async (req, res) => {
           .json({ error: "Current password is required to change password" });
       }
 
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(req.body.newPassword);
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          error: formatPasswordErrors(passwordValidation.errors),
+        });
+      }
+
       const isCurrentPasswordValid = await bcrypt.compare(
         req.body.currentPassword,
         user.password
@@ -276,6 +303,57 @@ const deleteUserProfile = asyncHandler(async (req, res) => {
 //   res.status(200).json({ message: "Role Selector" });
 // });
 
+// @desc    Create judge (Admin only)
+// @route   POST api/auth/create-judge
+// @access  Private/Admin
+const createJudge = asyncHandler(async (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    res.status(400);
+    throw new Error("Please add all fields");
+  }
+
+  // Validate password strength
+  const passwordValidation = validatePasswordStrength(password);
+  if (!passwordValidation.isValid) {
+    res.status(400);
+    throw new Error(formatPasswordErrors(passwordValidation.errors));
+  }
+
+  // Check if user exists
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    res.status(400);
+    throw new Error("User already exists");
+  }
+
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  // Create judge
+  const judge = await User.create({
+    username,
+    email,
+    password: hashedPassword,
+    role: "Judge",
+  });
+
+  if (judge) {
+    res.status(201).json({
+      _id: judge._id,
+      username: judge.username,
+      email: judge.email,
+      role: judge.role,
+      message: "Judge created successfully",
+    });
+  } else {
+    res.status(400);
+    throw new Error("Invalid judge data");
+  }
+});
+
 export {
   generateToken,
   registerUser,
@@ -286,4 +364,5 @@ export {
   uploadProfilePicture,
   deleteUserProfile,
   getUsers,
+  createJudge,
 };

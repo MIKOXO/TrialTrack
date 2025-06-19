@@ -12,6 +12,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
 import connectDB from "./config/db.js";
 const port = process.env.PORT || 3001;
 
@@ -35,6 +36,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/comments", commentRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

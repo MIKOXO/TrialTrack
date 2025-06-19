@@ -12,7 +12,7 @@ const caseSchema = new mongoose.Schema({
   defendant: {
     name: { type: String, required: true },
     email: String,
-    phone: String,
+    phone: { type: String, required: true },
     address: String,
   },
   plaintiff: {

@@ -4,6 +4,8 @@ import {
   sendNotification,
   getMyNotifications,
   markAsRead,
+  deleteNotification,
+  bulkDeleteNotifications,
 } from "../controllers/notificationController.js";
 
 const router = express.Router();
@@ -12,5 +14,7 @@ const router = express.Router();
 router.post("/send", authMiddleware, sendNotification);
 router.get("/getNotifications", authMiddleware, getMyNotifications);
 router.put("/read/:id", authMiddleware, markAsRead);
+router.delete("/delete/:id", authMiddleware, deleteNotification);
+router.post("/bulk-delete", authMiddleware, bulkDeleteNotifications);
 
 export default router;

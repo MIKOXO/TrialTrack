@@ -274,6 +274,39 @@ const getHearings = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Get hearings for logged in client
+// @route   GET api/hearings/client
+// @access  Private (Client only)
+const getClientHearings = asyncHandler(async (req, res) => {
+  try {
+    // Verify Client role
+    if (req.user.role !== "Client") {
+      return res
+        .status(403)
+        .json({ error: "Only clients can view their hearings" });
+    }
+
+    // Find all cases for this client
+    const clientCases = await Case.find({ client: req.user.id }).select("_id");
+    const caseIds = clientCases.map((c) => c._id);
+
+    // Find hearings for client's cases
+    const hearings = await Hearing.find({
+      case: { $in: caseIds },
+      date: { $gte: new Date() }, // Only upcoming hearings
+    })
+      .populate("case", "title")
+      .populate("court", "name location")
+      .populate("judge", "username")
+      .sort({ date: 1 })
+      .limit(10); // Limit to 10 most recent upcoming hearings
+
+    res.json(hearings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // @desc    Get hearing by ID
 // @route   GET api/hearings/:id
 // @access  Private
@@ -468,6 +501,7 @@ export {
   createHearing,
   updateHearing,
   getHearings,
+  getClientHearings,
   getHearingById,
   deleteHearing,
   getAvailableTimeSlots,

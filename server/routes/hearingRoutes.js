@@ -4,6 +4,7 @@ import {
   createHearing,
   updateHearing,
   getHearings,
+  getClientHearings,
   getHearingById,
   deleteHearing,
   getAvailableTimeSlots,
@@ -13,6 +14,7 @@ const router = express.Router();
 
 //  Routes
 router.get("/", authMiddleware, restrictTo("Judge"), getHearings);
+router.get("/client", authMiddleware, restrictTo("Client"), getClientHearings);
 router.get(
   "/available-slots/:courtId/:date",
   authMiddleware,

@@ -2,6 +2,163 @@ import asyncHandler from "express-async-handler";
 import Case from "../models/caseModel.js";
 import Notification from "../models/notificationModel.js";
 
+// Helper function to calculate similarity between two strings
+const calculateSimilarity = (str1, str2) => {
+  if (!str1 || !str2) return 0;
+
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+
+  if (s1 === s2) return 1;
+
+  // Simple word-based similarity
+  const words1 = s1.split(/\s+/);
+  const words2 = s2.split(/\s+/);
+
+  const commonWords = words1.filter((word) =>
+    words2.some((w) => w.includes(word) || word.includes(w))
+  );
+
+  const similarity = (commonWords.length * 2) / (words1.length + words2.length);
+  return similarity;
+};
+
+// Function to check for duplicate cases
+const checkForDuplicates = async (userId, caseData) => {
+  try {
+    // Get all cases for this user that are not closed
+    const userCases = await Case.find({
+      client: userId,
+      status: { $ne: "Closed" },
+    });
+
+    const duplicates = [];
+    const threshold = 0.7; // 70% similarity threshold
+
+    for (const existingCase of userCases) {
+      let similarityScore = 0;
+      let matchingFactors = [];
+
+      // Check title similarity (weighted heavily)
+      const titleSimilarity = calculateSimilarity(
+        caseData.title,
+        existingCase.title
+      );
+      if (titleSimilarity > 0.6) {
+        similarityScore += titleSimilarity * 0.4;
+        matchingFactors.push(
+          `Similar title (${Math.round(titleSimilarity * 100)}% match)`
+        );
+      }
+
+      // Check description similarity
+      const descSimilarity = calculateSimilarity(
+        caseData.description,
+        existingCase.description
+      );
+      if (descSimilarity > 0.5) {
+        similarityScore += descSimilarity * 0.3;
+        matchingFactors.push(
+          `Similar description (${Math.round(descSimilarity * 100)}% match)`
+        );
+      }
+
+      // Check defendant name similarity
+      if (caseData.defendant?.name && existingCase.defendant?.name) {
+        const defendantSimilarity = calculateSimilarity(
+          caseData.defendant.name,
+          existingCase.defendant.name
+        );
+        if (defendantSimilarity > 0.8) {
+          similarityScore += defendantSimilarity * 0.2;
+          matchingFactors.push(
+            `Same defendant (${Math.round(defendantSimilarity * 100)}% match)`
+          );
+        }
+      }
+
+      // Check case type match
+      if (caseData.caseType === existingCase.caseType) {
+        similarityScore += 0.1;
+        matchingFactors.push("Same case type");
+      }
+
+      // Check court match
+      if (caseData.court === existingCase.court) {
+        similarityScore += 0.05;
+        matchingFactors.push("Same court");
+      }
+
+      // If similarity is above threshold, consider it a potential duplicate
+      if (similarityScore >= threshold && matchingFactors.length > 0) {
+        duplicates.push({
+          caseId: existingCase._id,
+          title: existingCase.title,
+          status: existingCase.status,
+          createdAt: existingCase.createdAt,
+          similarityScore: Math.round(similarityScore * 100),
+          matchingFactors: matchingFactors,
+        });
+      }
+    }
+
+    return duplicates;
+  } catch (error) {
+    console.error("Error checking for duplicates:", error);
+    return [];
+  }
+};
+
+// @desc    Check for duplicate cases
+// @route   POST api/case/check-duplicates
+// @access  Private
+const checkDuplicates = asyncHandler(async (req, res) => {
+  if (req.user.role !== "Client") {
+    return res
+      .status(403)
+      .json({ error: "Only clients can check for duplicates" });
+  }
+
+  const { title, description, defendant, caseType, court } = req.body;
+
+  // Validate required fields for duplicate checking
+  if (!title || !title.trim()) {
+    return res
+      .status(400)
+      .json({ error: "Case title is required for duplicate checking" });
+  }
+
+  if (!description || !description.trim()) {
+    return res
+      .status(400)
+      .json({ error: "Case description is required for duplicate checking" });
+  }
+
+  try {
+    const duplicates = await checkForDuplicates(req.user.id, {
+      title: title.trim(),
+      description: description.trim(),
+      defendant,
+      caseType,
+      court,
+    });
+
+    res.json({
+      hasDuplicates: duplicates.length > 0,
+      duplicates: duplicates,
+      message:
+        duplicates.length > 0
+          ? `Found ${duplicates.length} potentially similar case${
+              duplicates.length > 1 ? "s" : ""
+            }`
+          : "No similar cases found",
+    });
+  } catch (error) {
+    console.error("Error checking duplicates:", error);
+    res.status(500).json({ error: "Failed to check for duplicates" });
+  }
+});
+
 // @desc    File a new case
 // @route   POST api/case/file
 // @access  Private
@@ -37,7 +194,32 @@ const fileCase = asyncHandler(async (req, res) => {
   }
 
   if (!defendant || !defendant.name || !defendant.name.trim()) {
-    return res.status(400).json({ error: "Defendant information is required" });
+    return res.status(400).json({ error: "Defendant name is required" });
+  }
+
+  if (!defendant.phone || !defendant.phone.trim()) {
+    return res
+      .status(400)
+      .json({ error: "Defendant phone number is required" });
+  }
+
+  // Validate phone number format
+  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+  const cleanPhone = defendant.phone.replace(/[\s\-\(\)]/g, "");
+  if (!phoneRegex.test(cleanPhone)) {
+    return res
+      .status(400)
+      .json({ error: "Please provide a valid defendant phone number" });
+  }
+
+  // Validate email format if provided (optional)
+  if (defendant.email && defendant.email.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(defendant.email.trim())) {
+      return res
+        .status(400)
+        .json({ error: "Please provide a valid defendant email address" });
+    }
   }
 
   // Validate compliance fields (required for legal filing)
@@ -60,6 +242,27 @@ const fileCase = asyncHandler(async (req, res) => {
   }
 
   try {
+    // Check for potential duplicates before filing
+    const duplicates = await checkForDuplicates(req.user.id, {
+      title: title.trim(),
+      description: description.trim(),
+      defendant,
+      caseType,
+      court,
+    });
+
+    // If duplicates found, return warning (but still allow filing with confirmation)
+    if (duplicates.length > 0 && !req.body.confirmDuplicate) {
+      return res.status(409).json({
+        error: "Potential duplicate case detected",
+        duplicates: duplicates,
+        message: `We found ${duplicates.length} similar case${
+          duplicates.length > 1 ? "s" : ""
+        } that you have already filed. Please review them before proceeding.`,
+        requiresConfirmation: true,
+      });
+    }
+
     const courtCase = new Case({
       title: title.trim(),
       description: description.trim(),
@@ -365,4 +568,5 @@ export {
   getCases,
   deleteCase,
   updateCaseStatus,
+  checkDuplicates,
 };

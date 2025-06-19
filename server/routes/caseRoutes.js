@@ -7,11 +7,18 @@ import {
   getCases,
   deleteCase,
   updateCaseStatus,
+  checkDuplicates,
 } from "../controllers/caseController.js";
 
 const router = express.Router();
 
 router.post("/file", authMiddleware, restrictTo("Client"), fileCase);
+router.post(
+  "/check-duplicates",
+  authMiddleware,
+  restrictTo("Client"),
+  checkDuplicates
+);
 router.put("/assign/:caseId", authMiddleware, restrictTo("Admin"), assignCase);
 router.get("/:id", authMiddleware, getCaseById);
 router.get("/", authMiddleware, getCases);

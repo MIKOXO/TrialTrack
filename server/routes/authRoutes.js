@@ -8,6 +8,7 @@ import {
   uploadProfilePicture,
   deleteUserProfile,
   getUsers,
+  createJudge,
 } from "../controllers/authController.js";
 import { authMiddleware, restrictTo } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -27,5 +28,6 @@ router.post(
 );
 router.delete("/delete/:id", authMiddleware, deleteUserProfile);
 router.get("/users", authMiddleware, restrictTo("Admin"), getUsers);
+router.post("/create-judge", authMiddleware, restrictTo("Admin"), createJudge);
 
 export default router;
