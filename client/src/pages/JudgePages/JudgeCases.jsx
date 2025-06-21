@@ -472,18 +472,40 @@ const JudgeCases = () => {
 
   const getStatusClass = (status) => {
     switch (status.toLowerCase()) {
-      case "active":
+      case "open":
         return "bg-blue-100 text-blue-800";
-      case "pending":
+      case "in progress":
         return "bg-yellow-100 text-yellow-800";
-      case "urgent":
-        return "bg-red-100 text-red-800";
       case "closed":
         return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (loading) {
+    return (
+      <JudgeLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading cases...</p>
+        </div>
+      </JudgeLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <JudgeLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </JudgeLayout>
+    );
+  }
 
   return (
     <section>
@@ -1030,11 +1052,11 @@ const JudgeCases = () => {
         )}
 
         {/* Toast Container */}
-      <ToastContainer
-        toasts={toasts}
-        onRemoveToast={removeToast}
-        position="top-right"
-      />
+        <ToastContainer
+          toasts={toasts}
+          onRemoveToast={removeToast}
+          position="top-right"
+        />
       </JudgeLayout>
     </section>
   );

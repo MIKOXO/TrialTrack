@@ -59,21 +59,48 @@ const JudgeSidebar = () => {
 
         <nav className="mt-10">
           <ul>
-            {menuItems.map((item, index) => (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  className={`font-Lexend flex items-center mx-4 px-4 py-3 text-secondary rounded-lg hover:bg-green-50 hover:text-green-600 ease-in-out duration-300 ${
-                    currentPath === item.path
-                      ? "bg-tertiary text-white mx-4 hover:bg-tertiary hover:text-white rounded-lg shadow-md"
-                      : ""
-                  }`}
-                >
-                  <span className="mr-3 text-xl">{item.icon}</span>
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+            {menuItems.map((item, index) => {
+              // Check if current path matches the menu item
+              // Handle multi-page workflows where detail pages should highlight parent menu items
+              const isActive = (() => {
+                // Exact match for most pages
+                if (currentPath === item.path) return true;
+
+                // For Cases menu item, also match case detail pages
+                if (
+                  item.path === "/judge/cases" &&
+                  currentPath.startsWith("/judge/cases/")
+                ) {
+                  return true;
+                }
+
+                // For Hearings menu item, also match hearing detail pages
+                if (
+                  item.path === "/judge/hearings" &&
+                  currentPath.startsWith("/judge/hearings/")
+                ) {
+                  return true;
+                }
+
+                return false;
+              })();
+
+              return (
+                <li key={index}>
+                  <Link
+                    to={item.path}
+                    className={`font-Lexend flex items-center mx-4 px-4 py-3 text-secondary rounded-lg hover:bg-green-50 hover:text-green-600 ease-in-out duration-300 ${
+                      isActive
+                        ? "bg-tertiary text-white mx-4 hover:bg-tertiary hover:text-white rounded-lg shadow-md"
+                        : ""
+                    }`}
+                  >
+                    <span className="mr-3 text-xl">{item.icon}</span>
+                    {item.name}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

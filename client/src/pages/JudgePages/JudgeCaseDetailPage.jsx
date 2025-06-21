@@ -97,6 +97,40 @@ const JudgeCaseDetailPage = () => {
     }
   };
 
+  // Fetch available time slots for selected court and date
+  const fetchAvailableTimeSlots = async (courtId, date) => {
+    if (!courtId || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    try {
+      setLoadingTimeSlots(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:3001/api/hearings/available-slots/${courtId}/${date}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAvailableTimeSlots(response.data.availableSlots);
+    } catch (err) {
+      console.error("Error fetching available time slots:", err);
+      setAvailableTimeSlots([]);
+      // Don't show error for this as it's not critical
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  };
+
   const handleStatusUpdate = async () => {
     if (!newStatus) {
       showError("Please select a status.");

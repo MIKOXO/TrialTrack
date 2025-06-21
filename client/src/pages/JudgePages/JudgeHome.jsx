@@ -169,6 +169,66 @@ const JudgeHome = () => {
 
         setAssignedCases(transformedCases);
 
+        // Generate chart data from cases
+        const currentYear = new Date().getFullYear();
+        const monthlyNewCases = Array(12).fill(0);
+        const monthlyResolvedCases = Array(12).fill(0);
+
+        cases.forEach((caseItem) => {
+          const createdDate = new Date(caseItem.createdAt);
+          const updatedDate = new Date(
+            caseItem.updatedAt || caseItem.createdAt
+          );
+
+          // Count new cases by month
+          if (createdDate.getFullYear() === currentYear) {
+            const month = createdDate.getMonth();
+            monthlyNewCases[month]++;
+          }
+
+          // Count resolved cases by month (when status changed to Closed)
+          if (
+            caseItem.status === "Closed" &&
+            updatedDate.getFullYear() === currentYear
+          ) {
+            const month = updatedDate.getMonth();
+            monthlyResolvedCases[month]++;
+          }
+        });
+
+        // Update chart data
+        const totalNew = monthlyNewCases.reduce((sum, count) => sum + count, 0);
+        const totalResolved = monthlyResolvedCases.reduce(
+          (sum, count) => sum + count,
+          0
+        );
+
+        // If no data exists, generate some sample data for demonstration
+        if (totalNew === 0 && totalResolved === 0 && cases.length === 0) {
+          const sampleNewCases = [2, 3, 1, 4, 2, 3, 5, 2, 1, 3, 2, 4];
+          const sampleResolvedCases = [1, 2, 2, 3, 1, 2, 4, 3, 2, 2, 1, 3];
+
+          setChartData({
+            newCases: sampleNewCases,
+            resolvedCases: sampleResolvedCases,
+            totalNewCases: sampleNewCases.reduce(
+              (sum, count) => sum + count,
+              0
+            ),
+            totalResolvedCases: sampleResolvedCases.reduce(
+              (sum, count) => sum + count,
+              0
+            ),
+          });
+        } else {
+          setChartData({
+            newCases: monthlyNewCases,
+            resolvedCases: monthlyResolvedCases,
+            totalNewCases: totalNew,
+            totalResolvedCases: totalResolved,
+          });
+        }
+
         // Fetch hearings
         try {
           const hearingsResponse = await axios.get(
@@ -224,6 +284,30 @@ const JudgeHome = () => {
     }
   }, []);
 
+  if (loading) {
+    return (
+      <JudgeLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading dashboard data...</p>
+        </div>
+      </JudgeLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <JudgeLayout>
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </JudgeLayout>
+    );
+  }
+
   return (
     <section>
       <JudgeLayout>
@@ -272,7 +356,13 @@ const JudgeHome = () => {
               </div>
               <div className="bg-white rounded-lg shadow-md p-4">
                 <div className="h-64">
-                  <Bar data={caseChartData} options={chartOptions} />
+                  {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-500">Loading chart data...</p>
+                    </div>
+                  ) : (
+                    <Bar data={caseChartData} options={chartOptions} />
+                  )}
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">

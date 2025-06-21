@@ -92,21 +92,51 @@ const JudgeHearingsPage = () => {
           },
         });
 
-        // Transform hearings data for the UI
-        const transformedHearings = response.data.map((hearing) => ({
-          id: hearing._id,
-          caseTitle: hearing.case?.title || "Unknown Case",
-          caseNumber: hearing._id.slice(-8).toUpperCase(),
-          caseId: hearing.case?._id || "",
-          date: hearing.date.split("T")[0], // Convert to YYYY-MM-DD format
-          time: hearing.time,
-          location: hearing.court?.name || "TBD",
-          status:
-            new Date(hearing.date) > new Date() ? "Upcoming" : "Completed",
-          parties: [], // Backend doesn't store parties separately
-          notes: hearing.notes || "",
-          type: "General",
-        }));
+        // Transform hearings data for the UI with enhanced status logic
+        const transformedHearings = response.data.map((hearing) => {
+          const hearingDate = new Date(hearing.date);
+          const hearingTime = hearing.time;
+          const now = new Date();
+
+          // Create a combined date-time for accurate comparison
+          const [hours, minutes] = hearingTime.split(":");
+          const hearingDateTime = new Date(hearingDate);
+          hearingDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+          // Determine status based on date/time and case status
+          let status = "Upcoming";
+          if (hearing.case?.status === "Closed") {
+            status = "Completed";
+          } else if (hearingDateTime < now) {
+            // If hearing time has passed but case is still open
+            const timeDiff = now - hearingDateTime;
+            const hoursDiff = timeDiff / (1000 * 60 * 60);
+
+            if (hoursDiff > 2) {
+              // More than 2 hours past - likely completed
+              status = "Completed";
+            } else {
+              // Within 2 hours - might still be in progress
+              status = "In Progress";
+            }
+          }
+
+          return {
+            id: hearing._id,
+            caseTitle: hearing.case?.title || "Unknown Case",
+            caseNumber: hearing._id.slice(-8).toUpperCase(),
+            caseId: hearing.case?._id || "",
+            caseStatus: hearing.case?.status || "Open",
+            date: hearing.date.split("T")[0], // Convert to YYYY-MM-DD format
+            time: hearing.time,
+            location: hearing.court?.name || "TBD",
+            status: status,
+            parties: [], // Backend doesn't store parties separately
+            notes: hearing.notes || "",
+            type: "General",
+            hearingDateTime: hearingDateTime, // Store for sorting
+          };
+        });
 
         setHearings(transformedHearings);
         setLoading(false);
@@ -308,20 +338,74 @@ const JudgeHearingsPage = () => {
     }
   };
 
+  // Filter hearings based on active tab and search term
+  useEffect(() => {
+    let filtered = [...hearings];
+
+    // Filter by tab
+    const today = new Date().toDateString();
+    switch (activeTab) {
+      case "today":
+        filtered = filtered.filter(
+          (hearing) => new Date(hearing.date).toDateString() === today
+        );
+        break;
+      case "upcoming":
+        filtered = filtered.filter((hearing) => hearing.status === "Upcoming");
+        break;
+      case "inprogress":
+        filtered = filtered.filter(
+          (hearing) => hearing.status === "In Progress"
+        );
+        break;
+      case "completed":
+        filtered = filtered.filter((hearing) => hearing.status === "Completed");
+        break;
+      default:
+        // "all" - no additional filtering
+        break;
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (hearing) =>
+          hearing.caseTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          hearing.caseNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          hearing.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Sort by date and time (upcoming first, then by date/time)
+    filtered.sort((a, b) => {
+      // First sort by status priority (Upcoming > In Progress > Completed)
+      const statusPriority = { Upcoming: 3, "In Progress": 2, Completed: 1 };
+      const statusDiff =
+        (statusPriority[b.status] || 0) - (statusPriority[a.status] || 0);
+
+      if (statusDiff !== 0) return statusDiff;
+
+      // Then sort by date/time
+      return a.hearingDateTime - b.hearingDateTime;
+    });
+
+    setFilteredHearings(filtered);
+  }, [hearings, activeTab, searchTerm]);
+
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
-  // if (loading) {
-  //   return (
-  //     <JudgeLayout>
-  //       <div className="flex justify-center items-center h-full">
-  //         <p className="text-lg">Loading hearings...</p>
-  //       </div>
-  //     </JudgeLayout>
-  //   );
-  // }
+  if (loading) {
+    return (
+      <JudgeLayout>
+        <div className="flex justify-center items-center h-full">
+          <p className="text-lg">Loading hearings...</p>
+        </div>
+      </JudgeLayout>
+    );
+  }
 
   if (error) {
     return (
@@ -347,7 +431,7 @@ const JudgeHearingsPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 w-[590px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
+      <div className="mb-6 w-[640px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
         <div className="flex p-2">
           <button
             className={`py-3 px-8 text-center font-medium transition-all  ${
@@ -377,7 +461,7 @@ const JudgeHearingsPage = () => {
             }`}
             onClick={() => setActiveTab("upcoming")}
           >
-            Upcoming
+            Upcoming ({hearings.filter((h) => h.status === "Upcoming").length})
           </button>
           <button
             className={`py-3 px-8 text-center font-medium transition-all  ${
@@ -387,7 +471,8 @@ const JudgeHearingsPage = () => {
             }`}
             onClick={() => setActiveTab("completed")}
           >
-            Completed
+            Completed ({hearings.filter((h) => h.status === "Completed").length}
+            )
           </button>
         </div>
       </div>
@@ -671,6 +756,33 @@ const JudgeHearingsPage = () => {
       )}
 
       {/* Delete Hearing Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Delete Hearing</h2>
+            <p className="mb-4 text-gray-600">
+              Are you sure you want to delete this hearing for case:{" "}
+              <span className="font-medium">{selectedHearing?.caseTitle}</span>?
+            </p>
+            <p className="mb-4 text-gray-600">This action cannot be undone.</p>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteHearing}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">

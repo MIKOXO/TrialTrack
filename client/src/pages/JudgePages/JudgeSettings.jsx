@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useRef } from "react";
 import JudgeLayout from "../../components/JudgeLayout";
+import ProfileAvatar from "../../components/ProfileAvatar";
 import {
   FaUser,
   FaLock,
@@ -13,9 +14,10 @@ import {
 import { authAPI } from "../../services/api";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
+import { validatePasswordStrength } from "../../utils/passwordValidation";
+import PasswordRequirements from "../../components/PasswordRequirements";
 
 const JudgeSettings = () => {
-  const [user, setUser] = useState(null);
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,7 @@ const JudgeSettings = () => {
     systemAlerts: true,
   });
 
+  // Load user profile data on component mount
   useEffect(() => {
     const loadUserProfile = () => {
       try {
@@ -117,8 +120,12 @@ const JudgeSettings = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      showError("New password must be at least 6 characters long");
+    // Enhanced password validation
+    const passwordValidation = validatePasswordStrength(
+      passwordData.newPassword
+    );
+    if (!passwordValidation.isValid) {
+      showError(passwordValidation.errors[0]);
       return;
     }
 
@@ -248,6 +255,7 @@ const JudgeSettings = () => {
   return (
     <section>
       <JudgeLayout>
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div className="mb-4">
           <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
           <p className="text-gray-600 font-light">
@@ -289,13 +297,18 @@ const JudgeSettings = () => {
                     </label>
                     <div className="flex items-center space-x-4">
                       <div className="relative">
-                        <img
-                          src={
-                            profilePicture ||
-                            "https://via.placeholder.com/100x100?text=Admin"
-                          }
-                          alt="Profile"
-                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                        <ProfileAvatar
+                          user={{
+                            ...JSON.parse(localStorage.getItem("user") || "{}"),
+                            profilePicture: profilePicture
+                              ? profilePicture.replace(
+                                  "http://localhost:3001/uploads/",
+                                  ""
+                                )
+                              : null,
+                          }}
+                          size="2xl"
+                          className="border-2 border-gray-200"
                         />
                         {uploadLoading && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -432,6 +445,7 @@ const JudgeSettings = () => {
                       }
                       className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
+                    <PasswordRequirements password={passwordData.newPassword} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
