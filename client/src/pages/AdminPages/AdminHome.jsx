@@ -269,6 +269,13 @@ const AdminHome = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   if (loading) {
     return (
       <AdminLayout>
@@ -298,7 +305,7 @@ const AdminHome = () => {
       <AdminLayout>
         <div className="mb-6">
           <h1 className="text-xl font-semibold text-gray-800">
-            Welcome back, Admin
+            Welcome Back {user?.username || "Admin"}
           </h1>
           <p className="text-gray-600 font-light">
             Here's a summary of the court case management system.

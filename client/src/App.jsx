@@ -27,6 +27,7 @@ import JudgeHearingsPage from "./pages/JudgePages/JudgeHearingsPage";
 import JudgeHearingDetailPage from "./pages/JudgePages/JudgeHearingDetailPage";
 import JudgeCaseDetailPage from "./pages/JudgePages/JudgeCaseDetailPage";
 import ClientFeedback from "./pages/ClientPages/ClientFeedback";
+import AdminComments from "./pages/AdminPages/AdminComments";
 
 const App = () => {
   return (
@@ -44,6 +45,7 @@ const App = () => {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/calendar" element={<AdminCalendar />} />
           <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/comments" element={<AdminComments />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
         </Route>
 

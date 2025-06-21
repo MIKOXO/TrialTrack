@@ -8,6 +8,7 @@ import {
   FaCog,
   FaSignOutAlt,
   FaGavel,
+  FaComments,
 } from "react-icons/fa";
 import Logo from "./Logo";
 
@@ -34,7 +35,7 @@ const AdminSidebar = () => {
     },
     {
       path: "/admin/users",
-      name: "Clients",
+      name: "Users",
       icon: <FaUsers className="w-5 h-5" />,
     },
     {
@@ -46,6 +47,11 @@ const AdminSidebar = () => {
       path: "/admin/reports",
       name: "Reports",
       icon: <FaChartBar className="w-5 h-5" />,
+    },
+    {
+      path: "/admin/comments",
+      name: "Comments",
+      icon: <FaComments className="w-5 h-5" />,
     },
     {
       path: "/admin/settings",
@@ -66,21 +72,47 @@ const AdminSidebar = () => {
 
         <nav className="mt-10">
           <ul>
-            {menuItems.map((item, index) => (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  className={`font-Lexend flex items-center mx-4 px-4 py-3 text-secondary rounded-lg hover:bg-green-50 hover:text-green-600 ease-in-out duration-300 ${
-                    currentPath === item.path
-                      ? "bg-tertiary text-white mx-4 hover:bg-tertiary hover:text-white rounded-lg shadow-md"
-                      : ""
-                  }`}
-                >
-                  <span className="mr-3 text-xl">{item.icon}</span>
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+            {menuItems.map((item, index) => {
+              // Check if current path matches the menu item
+              // Handle multi-page workflows where detail pages should highlight parent menu items
+              const isActive = (() => {
+                // Exact match for most pages
+                if (currentPath === item.path) return true;
+
+                // For Cases menu item, also match case detail pages
+                if (
+                  item.path === "/admin/cases" &&
+                  currentPath.startsWith("/admin/cases/")
+                ) {
+                  return true;
+                }
+
+                // For Users menu item, also match user detail pages if they exist
+                if (
+                  item.path === "/admin/clients" &&
+                  currentPath.startsWith("/admin/clients/")
+                ) {
+                  return true;
+                }
+
+                return false;
+              })();
+              return (
+                <li key={index}>
+                  <Link
+                    to={item.path}
+                    className={`font-Lexend flex items-center mx-4 px-4 py-3 text-secondary rounded-lg hover:bg-green-50 hover:text-green-600 ease-in-out duration-300 ${
+                      isActive
+                        ? "bg-tertiary text-white mx-4 hover:bg-tertiary hover:text-white rounded-lg shadow-md"
+                        : ""
+                    }`}
+                  >
+                    <span className="mr-3 text-xl">{item.icon}</span>
+                    {item.name}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

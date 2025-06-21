@@ -5,7 +5,7 @@ import Logo from "./Logo";
 const Navbar = () => {
   return (
     <header className="">
-      <div className="mx-auto lg:px-32 container p-2 flex flex-row items-center justify-between gap-6">
+      <div className="mx-auto lg:pt-5 lg:px-32 container p-2 flex flex-row items-center justify-between gap-6">
         {/* Logo */}
         <div>
           <Logo />
