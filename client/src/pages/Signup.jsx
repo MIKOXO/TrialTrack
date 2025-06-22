@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useNavigate, Link } from "react-router-dom";
 import Logo from "../components/Logo";
+import LoadingButton from "../components/LoadingButton";
 import { validatePasswordStrength } from "../utils/passwordValidation";
 import PasswordRequirements from "../components/PasswordRequirements";
 import usePageLoadAnimation from "../hooks/usePageLoadAnimation";
@@ -27,6 +28,7 @@ const Signup = () => {
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Animation hooks
   const logoVisible = usePageLoadAnimation(100);
@@ -77,6 +79,7 @@ const Signup = () => {
     if (Object.keys(validationErrors).length > 0) return;
 
     try {
+      setLoading(true);
       const res = await axios.post("http://localhost:3001/api/auth/register", {
         ...form,
         role: "Client",
@@ -91,6 +94,8 @@ const Signup = () => {
       const msg =
         err.response?.data?.error || "Sign up failed. Please try again.";
       setSubmitError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -135,11 +140,12 @@ const Signup = () => {
               name="username"
               value={form.username}
               onChange={handleChange}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                 errors.username
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
 
             <label
@@ -164,11 +170,12 @@ const Signup = () => {
               name="email"
               value={form.email}
               onChange={handleChange}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                 errors.email
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
 
             <label
@@ -195,11 +202,12 @@ const Signup = () => {
               onChange={handleChange}
               onFocus={() => setIsPasswordFocused(true)}
               onBlur={() => setIsPasswordFocused(false)}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                 errors.password
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
 
             <label
@@ -215,7 +223,10 @@ const Signup = () => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-3.5 text-gray-500 hover:text-blue-600"
+              disabled={loading}
+              className={`absolute right-3 top-3.5 text-gray-500 hover:text-blue-600 ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               {showPassword ? (
                 <EyeSlashIcon className="w-5 h-5" />
@@ -241,11 +252,12 @@ const Signup = () => {
               name="confirmPassword"
               value={form.confirmPassword}
               onChange={handleChange}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                 errors.confirmPassword
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
 
             <label
@@ -261,7 +273,10 @@ const Signup = () => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-3.5 text-gray-500 hover:text-blue-600"
+              disabled={loading}
+              className={`absolute right-3 top-3.5 text-gray-500 hover:text-blue-600 ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               {showPassword ? (
                 <EyeSlashIcon className="w-5 h-5" />
@@ -277,16 +292,18 @@ const Signup = () => {
           </div>
 
           <div className="mt-6">
-            <button
+            <LoadingButton
               type="submit"
-              className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow-300 ease-in-out duration-300"
+              loading={loading}
+              loadingText="Creating Account..."
+              className="w-full bg-tertiary text-primary shadow-400 hover:shadow-300 focus:ring-tertiary"
             >
               Create Account
-            </button>
+            </LoadingButton>
 
             <p className="mt-5 text-center font-light">
               Already Have An Account?{" "}
-              <Link to="/signin" className="text-tertiary underline">
+              <Link to="/roleselector" className="text-tertiary underline">
                 Log In
               </Link>
             </p>

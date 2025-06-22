@@ -96,9 +96,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (user.role !== role) {
-    return res
-      .status(403)
-      .json({ error: `You are not registered as a ${role}` });
+    return res.status(403).json({ error: `You are not registered as ${role}` });
   }
 
   if (await bcrypt.compare(password, user.password)) {

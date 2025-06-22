@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
+import LoadingButton from "../components/LoadingButton";
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -126,11 +127,12 @@ const Signin = () => {
               name="email"
               value={form.email}
               onChange={handleChange}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                 errors.email
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
 
             <label
@@ -155,11 +157,12 @@ const Signin = () => {
               name="password"
               value={form.password}
               onChange={handleChange}
+              disabled={loading}
               className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                 errors.password
                   ? "border-red-500 focus:ring-red-500"
                   : "border-gray-300 focus:ring-tertiary"
-              }`}
+              } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
             />
             <label
               htmlFor="password"
@@ -175,7 +178,10 @@ const Signin = () => {
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-3.5 text-gray-500 hover:text-tertiary"
+              disabled={loading}
+              className={`absolute right-3 top-3.5 text-gray-500 hover:text-tertiary ${
+                loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               {showPassword ? (
                 <EyeSlashIcon className="w-5 h-5" />
@@ -192,13 +198,14 @@ const Signin = () => {
             <p className="text-red-600 text-sm text-center">{serverError}</p>
           )}
 
-          <button
-            disabled={loading}
+          <LoadingButton
             type="submit"
-            className="bg-tertiary text-primary px-7 py-3 w-full rounded-lg text-lg shadow-400 hover:shadow-300 ease-in-out duration-300"
+            loading={loading}
+            loadingText="Signing in..."
+            className="w-full bg-tertiary text-primary shadow-400 hover:shadow-300 focus:ring-tertiary"
           >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
+            Sign In
+          </LoadingButton>
 
           <p className="mt-5 text-center font-light">
             Don't Have An Account?{" "}
