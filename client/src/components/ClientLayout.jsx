@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ClientSidebar from "./ClientSidebar";
 import { FaBars, FaTimes } from "react-icons/fa";
+import ProfileAvatar from "./ProfileAvatar";
 
 const ClientLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -47,13 +48,8 @@ const ClientLayout = ({ children }) => {
           <div className="flex items-center">
             <div className="relative">
               <div className="flex items-center space-x-3">
-                <div className="hidden md:block">
-                  <h1 className="text-lg font-medium text-secondary">
-                    Hi, {user?.username || "Client"}
-                  </h1>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white">
-                  {user?.username?.charAt(0).toUpperCase() || "C"}
+                <div className="flex items-center mr-3">
+                  <ProfileAvatar user={user} size="md" showName={true} />
                 </div>
               </div>
             </div>
