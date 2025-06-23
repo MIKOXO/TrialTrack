@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import ProfileAvatar from "../../components/ProfileAvatar";
+import LoadingButton from "../../components/LoadingButton";
 import {
   FaUser,
   FaLock,
@@ -118,7 +119,7 @@ const AdminSettings = () => {
       return;
     }
 
-   // Enhanced password validation
+    // Enhanced password validation
     const passwordValidation = validatePasswordStrength(
       passwordData.newPassword
     );
@@ -253,7 +254,7 @@ const AdminSettings = () => {
   return (
     <section>
       <AdminLayout>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div className="mb-4 ">
           <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
           <p className="text-gray-600 font-light">
@@ -296,18 +297,18 @@ const AdminSettings = () => {
                     <div className="flex items-center space-x-4">
                       <div className="relative">
                         <ProfileAvatar
-                        user={{
-                          ...JSON.parse(localStorage.getItem("user") || "{}"),
-                          profilePicture: profilePicture
-                            ? profilePicture.replace(
-                                "http://localhost:3001/uploads/",
-                                ""
-                              )
-                            : null,
-                        }}
-                        size="2xl"
-                        className="border-2 border-gray-200"
-                      />
+                          user={{
+                            ...JSON.parse(localStorage.getItem("user") || "{}"),
+                            profilePicture: profilePicture
+                              ? profilePicture.replace(
+                                  "http://localhost:3001/uploads/",
+                                  ""
+                                )
+                              : null,
+                          }}
+                          size="2xl"
+                          className="border-2 border-gray-200"
+                        />
                         {uploadLoading && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
@@ -315,27 +316,27 @@ const AdminSettings = () => {
                         )}
                       </div>
                       <div className="flex flex-col space-y-2">
-                        <button
+                        <LoadingButton
                           type="button"
                           onClick={handleProfilePictureClick}
-                          disabled={uploadLoading}
-                          className="bg-tertiary text-white px-4 py-2 rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          loading={uploadLoading}
+                          loadingText="Uploading..."
+                          className="bg-tertiary text-white px-4 py-2 rounded-md shadow hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
                         >
                           <FaCamera />
-                          <span>
-                            {uploadLoading ? "Uploading..." : "Change Picture"}
-                          </span>
-                        </button>
+                          <span>Change Picture</span>
+                        </LoadingButton>
                         {profilePicture && (
-                          <button
+                          <LoadingButton
                             type="button"
                             onClick={handleRemoveProfilePicture}
-                            disabled={uploadLoading}
-                            className="px-4 py-2 bg-red-600 text-white text-sm rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                            loading={uploadLoading}
+                            loadingText="Removing..."
+                            className="px-4 py-2 bg-red-600 text-white text-sm rounded-md shadow hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
                           >
                             <FaTrash />
                             <span>Remove Picture</span>
-                          </button>
+                          </LoadingButton>
                         )}
                       </div>
                       <input
@@ -396,14 +397,15 @@ const AdminSettings = () => {
                       className="w-full border border-gray-300 rounded-md px-4 py-4 bg-gray-100 text-gray-500"
                     />
                   </div>
-                  <button
+                  <LoadingButton
                     type="submit"
-                    disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    loading={loading}
+                    loadingText="Saving..."
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
                   >
                     <FaSave />
-                    <span>{loading ? "Saving..." : "Save Changes"}</span>
-                  </button>
+                    <span>Save Changes</span>
+                  </LoadingButton>
                 </form>
               </div>
             )}
@@ -443,7 +445,7 @@ const AdminSettings = () => {
                       }
                       className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
-                     <PasswordRequirements password={passwordData.newPassword} />
+                    <PasswordRequirements password={passwordData.newPassword} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -461,14 +463,15 @@ const AdminSettings = () => {
                       className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
                   </div>
-                  <button
+                  <LoadingButton
                     type="submit"
-                    disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    loading={loading}
+                    loadingText="Changing..."
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
                   >
                     <FaSave />
-                    <span>{loading ? "Changing..." : "Change Password"}</span>
-                  </button>
+                    <span>Change Password</span>
+                  </LoadingButton>
                 </form>
               </div>
             )}

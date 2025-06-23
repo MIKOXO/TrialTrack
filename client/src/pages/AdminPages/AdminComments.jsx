@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { commentsAPI } from "../../services/api";
 import AdminLayout from "../../components/AdminLayout";
+import { AdminPageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import {
   FaComments,
   FaStar,
@@ -265,9 +267,8 @@ const AdminComments = () => {
           {/* Comments Table */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             {loading ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading comments...</p>
+              <div className="p-8">
+                <AdminPageLoader message="Loading comments..." />
               </div>
             ) : comments.length === 0 ? (
               <div className="p-8 text-center">
@@ -560,22 +561,24 @@ const CommentModal = ({ comment, onClose, onUpdateStatus, updating }) => {
               Close
             </button>
             {comment.status !== "Reviewed" && (
-              <button
+              <LoadingButton
                 onClick={() => onUpdateStatus("Reviewed", adminNotes)}
-                disabled={updating}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={updating}
+                loadingText="Updating..."
+                className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
               >
-                {updating ? "Updating..." : "Mark as Reviewed"}
-              </button>
+                Mark as Reviewed
+              </LoadingButton>
             )}
             {comment.status !== "Resolved" && (
-              <button
+              <LoadingButton
                 onClick={() => onUpdateStatus("Resolved", adminNotes)}
-                disabled={updating}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                loading={updating}
+                loadingText="Updating..."
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
-                {updating ? "Updating..." : "Mark as Resolved"}
-              </button>
+                Mark as Resolved
+              </LoadingButton>
             )}
           </div>
         </div>

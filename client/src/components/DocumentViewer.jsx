@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { documentsAPI } from "../services/api";
+import { InlineLoader } from "./PageLoader";
+import Spinner from "./Spinner";
 import {
   FaFile,
   FaDownload,
@@ -144,9 +146,8 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <FaSpinner className="animate-spin text-2xl text-gray-400" />
-        <span className="ml-2 text-gray-600">Loading documents...</span>
+      <div className="py-8">
+        <InlineLoader message="Loading documents..." color="tertiary" />
       </div>
     );
   }
@@ -220,7 +221,7 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
                   title="Delete Document"
                 >
                   {deleteLoading === document._id ? (
-                    <FaSpinner className="animate-spin" />
+                    <Spinner size="xs" color="tertiary" />
                   ) : (
                     <FaTrash />
                   )}

@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import { JudgePageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
+import useToast from "../../hooks/useToast";
+import ToastContainer from "../../components/ToastContainer";
 import {
   FaArrowLeft,
   FaCalendarAlt,
@@ -19,6 +23,7 @@ import {
 const JudgeHearingDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const [hearing, setHearing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,6 +35,9 @@ const JudgeHearingDetailPage = () => {
   const [hearingNotes, setHearingNotes] = useState("");
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [newNote, setNewNote] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [addNoteLoading, setAddNoteLoading] = useState(false);
 
   // Fetch hearing data
   useEffect(() => {
@@ -96,9 +104,10 @@ const JudgeHearingDetailPage = () => {
     if (!hearingDate || !hearingTime || !hearingLocation) return;
 
     try {
+      setEditLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Authentication token not found");
+        showError("Authentication token not found. Please sign in again.");
         return;
       }
 
@@ -129,21 +138,24 @@ const JudgeHearingDetailPage = () => {
       });
 
       setShowEditModal(false);
-      alert("Hearing updated successfully!");
+      showSuccess("Hearing updated successfully!");
     } catch (err) {
       console.error("Error updating hearing:", err);
-      alert(
+      showError(
         err.response?.data?.error ||
           "Failed to update hearing. Please try again."
       );
+    } finally {
+      setEditLoading(false);
     }
   };
 
   const handleDeleteHearing = async () => {
     try {
+      setDeleteLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Authentication token not found");
+        showError("Authentication token not found. Please sign in again.");
         return;
       }
 
@@ -154,39 +166,49 @@ const JudgeHearingDetailPage = () => {
       });
 
       setShowDeleteModal(false);
-      alert("Hearing deleted successfully!");
+      showSuccess("Hearing deleted successfully!");
 
       // Navigate back to hearings list
       navigate("/judge/hearings");
     } catch (err) {
       console.error("Error deleting hearing:", err);
-      alert(
+      showError(
         err.response?.data?.error ||
           "Failed to delete hearing. Please try again."
       );
       setShowDeleteModal(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim()) return;
 
-    // Add note to hearing
-    const updatedNotes = hearing.notes
-      ? `${hearing.notes}\n\n${new Date().toLocaleDateString()}: ${newNote}`
-      : `${new Date().toLocaleDateString()}: ${newNote}`;
+    try {
+      setAddNoteLoading(true);
 
-    setHearing({
-      ...hearing,
-      notes: updatedNotes,
-    });
+      // Add note to hearing
+      const updatedNotes = hearing.notes
+        ? `${hearing.notes}\n\n${new Date().toLocaleDateString()}: ${newNote}`
+        : `${new Date().toLocaleDateString()}: ${newNote}`;
 
-    setHearingNotes(updatedNotes);
-    setNewNote("");
-    setShowAddNoteModal(false);
+      setHearing({
+        ...hearing,
+        notes: updatedNotes,
+      });
 
-    // Show success message
-    alert(`Note added successfully`);
+      setHearingNotes(updatedNotes);
+      setNewNote("");
+      setShowAddNoteModal(false);
+
+      // Show success message
+      showSuccess("Note added successfully!");
+    } catch (err) {
+      showError("Failed to add note. Please try again.");
+    } finally {
+      setAddNoteLoading(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -197,9 +219,7 @@ const JudgeHearingDetailPage = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading hearing details...</p>
-        </div>
+        <JudgePageLoader message="Loading hearing details..." />
       </JudgeLayout>
     );
   }
@@ -506,12 +526,15 @@ const JudgeHearingDetailPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleEditHearing}
-                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300"
+                loading={editLoading}
+                loadingText="Updating..."
+                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
               >
+                <FaEdit className="mr-2" />
                 Update Hearing
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -538,12 +561,15 @@ const JudgeHearingDetailPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleDeleteHearing}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 ease-in-out duration-300"
+                loading={deleteLoading}
+                loadingText="Deleting..."
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 ease-in-out duration-300 flex items-center"
               >
+                <FaTrashAlt className="mr-2" />
                 Delete
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -579,16 +605,26 @@ const JudgeHearingDetailPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleAddNote}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 ease-in-out duration-300"
+                loading={addNoteLoading}
+                loadingText="Adding..."
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
               >
+                <FaStickyNote className="mr-2" />
                 Add Note
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
       )}
+
+      {/* Toast Container */}
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="top-right"
+      />
     </JudgeLayout>
   );
 };

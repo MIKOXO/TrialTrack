@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import { AdminPageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import {
   FaFileAlt,
   FaCalendarAlt,
@@ -147,9 +149,7 @@ const AdminReports = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading reports...</p>
-        </div>
+        <AdminPageLoader message="Loading reports..." />
       </AdminLayout>
     );
   }
@@ -283,13 +283,14 @@ const AdminReports = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <button
+                  <LoadingButton
                     type="submit"
-                    disabled={submitLoading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    loading={submitLoading}
+                    loadingText="Submitting..."
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300"
                   >
-                    {submitLoading ? "Submitting..." : "Submit Report"}
-                  </button>
+                    Submit Report
+                  </LoadingButton>
                 </div>
               </form>
             </div>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import AdminLayout from "../../components/AdminLayout";
+import { AdminPageLoader } from "../../components/PageLoader";
 import {
   FaGavel,
   FaUser,
@@ -279,9 +280,7 @@ const AdminHome = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading dashboard data...</p>
-        </div>
+        <AdminPageLoader message="Loading dashboard data..." />
       </AdminLayout>
     );
   }

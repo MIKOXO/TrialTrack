@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import { JudgePageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI } from "../../services/api";
@@ -35,6 +37,10 @@ const JudgeCaseDetailPage = () => {
   const [hearingTime, setHearingTime] = useState("");
   const [selectedCourt, setSelectedCourt] = useState("");
   const [hearingNotes, setHearingNotes] = useState("");
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [scheduleHearingLoading, setScheduleHearingLoading] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
 
   useEffect(() => {
     fetchCaseDetails();
@@ -146,6 +152,7 @@ const JudgeCaseDetailPage = () => {
     }
 
     try {
+      setStatusUpdateLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showError("Authentication token not found. Please sign in again.");
@@ -186,6 +193,8 @@ const JudgeCaseDetailPage = () => {
             "Failed to update case status. Please try again."
         );
       }
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
@@ -204,6 +213,7 @@ const JudgeCaseDetailPage = () => {
     }
 
     try {
+      setScheduleHearingLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showError("Authentication token not found. Please sign in again.");
@@ -261,6 +271,8 @@ const JudgeCaseDetailPage = () => {
             "Failed to schedule hearing. Please try again."
         );
       }
+    } finally {
+      setScheduleHearingLoading(false);
     }
   };
 
@@ -288,9 +300,7 @@ const JudgeCaseDetailPage = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading case details...</p>
-        </div>
+        <JudgePageLoader message="Loading case details..." />
       </JudgeLayout>
     );
   }
@@ -586,17 +596,16 @@ const JudgeCaseDetailPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleStatusUpdate}
+                loading={statusUpdateLoading}
+                loadingText="Updating..."
                 disabled={!newStatus}
-                className={`px-4 py-2 rounded-md ease-in-out duration-300 ${
-                  !newStatus
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-tertiary text-white hover:bg-green-700"
-                }`}
+                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
               >
+                <FaEdit className="mr-2" />
                 Update Status
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -675,17 +684,16 @@ const JudgeCaseDetailPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleScheduleHearing}
+                loading={scheduleHearingLoading}
+                loadingText="Scheduling..."
                 disabled={!hearingDate || !hearingTime || !selectedCourt}
-                className={`px-4 py-2 rounded-md ease-in-out duration-300 ${
-                  !hearingDate || !hearingTime || !selectedCourt
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-tertiary text-white hover:bg-green-700"
-                }`}
+                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
               >
+                <FaCalendarAlt className="mr-2" />
                 Schedule
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>

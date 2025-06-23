@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import JudgeLayout from "../../components/JudgeLayout";
 import axios from "axios";
+import { JudgePageLoader } from "../../components/PageLoader";
 import {
   FaFileAlt,
   FaCalendarAlt,
@@ -287,9 +288,7 @@ const JudgeHome = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading dashboard data...</p>
-        </div>
+        <JudgePageLoader message="Loading dashboard data..." />
       </JudgeLayout>
     );
   }

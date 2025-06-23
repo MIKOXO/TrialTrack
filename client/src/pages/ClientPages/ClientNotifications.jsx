@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import ClientLayout from "../../components/ClientLayout";
 import { notificationsAPI } from "../../services/api";
+import { ClientPageLoader } from "../../components/PageLoader";
 import {
   FaBell,
   FaEnvelope,
@@ -269,9 +270,7 @@ const ClientNotifications = () => {
   if (loading) {
     return (
       <ClientLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
+        <ClientPageLoader message="Loading your notifications..." />
       </ClientLayout>
     );
   }

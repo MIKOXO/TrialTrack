@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import { JudgePageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
+import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI } from "../../services/api";
@@ -37,6 +40,8 @@ const JudgeCases = () => {
   const [availableCourts, setAvailableCourts] = useState([]);
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+  const [scheduleHearingLoading, setScheduleHearingLoading] = useState(false);
 
   // Dropdown positioning
   const [dropdownPosition, setDropdownPosition] = useState(null);
@@ -320,6 +325,7 @@ const JudgeCases = () => {
     if (!selectedCase || !newStatus) return;
 
     try {
+      setStatusUpdateLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showError("Authentication token not found. Please sign in again.");
@@ -368,6 +374,8 @@ const JudgeCases = () => {
             "Failed to update case status. Please try again."
         );
       }
+    } finally {
+      setStatusUpdateLoading(false);
     }
   };
 
@@ -375,6 +383,7 @@ const JudgeCases = () => {
     if (!selectedCase || !hearingDate || !hearingTime || !selectedCourt) return;
 
     try {
+      setScheduleHearingLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showError("Authentication token not found. Please sign in again.");
@@ -467,6 +476,8 @@ const JudgeCases = () => {
             "Failed to schedule hearing. Please try again."
         );
       }
+    } finally {
+      setScheduleHearingLoading(false);
     }
   };
 
@@ -486,9 +497,7 @@ const JudgeCases = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading cases...</p>
-        </div>
+        <JudgePageLoader message="Loading cases..." />
       </JudgeLayout>
     );
   }
@@ -860,195 +869,207 @@ const JudgeCases = () => {
 
         {/* Status Change Modal */}
         {showStatusModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Change Case Status
-                </h2>
-                <button
-                  onClick={() => setShowStatusModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  ×
-                </button>
-              </div>
+          <FormLoadingOverlay
+            isVisible={statusUpdateLoading}
+            message="Updating status..."
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Change Case Status
+                  </h2>
+                  <button
+                    onClick={() => setShowStatusModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">Case:</p>
-                <p className="font-medium text-gray-900">
-                  {selectedCase?.title}
-                </p>
-                <p className="text-xs text-gray-500">
-                  ID: {selectedCase?.caseNumber}
-                </p>
-              </div>
+                <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">Case:</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedCase?.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ID: {selectedCase?.caseNumber}
+                  </p>
+                </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Status *
-                </label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">-- Select Status --</option>
-                  <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Status *
+                  </label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">-- Select Status --</option>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowStatusModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleStatusChange}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                >
-                  Update Status
-                </button>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowStatusModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleStatusChange}
+                    loading={statusUpdateLoading}
+                    loadingText="Updating..."
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    <FaEdit className="mr-2" />
+                    Update Status
+                  </LoadingButton>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
 
         {/* Schedule Hearing Modal */}
         {showHearingModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Schedule Hearing
-                </h2>
-                <button
-                  onClick={() => setShowHearingModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">Case:</p>
-                <p className="font-medium text-gray-900">
-                  {selectedCase?.title}
-                </p>
-                <p className="text-xs text-gray-500">
-                  ID: {selectedCase?.caseNumber}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  value={hearingDate}
-                  onChange={(e) => setHearingDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time *
-                  {selectedCourt && hearingDate && (
-                    <span className="text-xs text-gray-500 ml-2">
-                      ({availableTimeSlots.length} slots available)
-                    </span>
-                  )}
-                </label>
-                {selectedCourt &&
-                hearingDate &&
-                availableTimeSlots.length > 0 ? (
-                  <select
-                    value={hearingTime}
-                    onChange={(e) => setHearingTime(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    disabled={loadingTimeSlots}
+          <FormLoadingOverlay
+            isVisible={scheduleHearingLoading}
+            message="Scheduling hearing..."
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Schedule Hearing
+                  </h2>
+                  <button
+                    onClick={() => setShowHearingModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
                   >
-                    <option value="">-- Select available time --</option>
-                    {availableTimeSlots.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
+                    ×
+                  </button>
+                </div>
+
+                <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">Case:</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedCase?.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ID: {selectedCase?.caseNumber}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={hearingDate}
+                    onChange={(e) => setHearingDate(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Time *
+                    {selectedCourt && hearingDate && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({availableTimeSlots.length} slots available)
+                      </span>
+                    )}
+                  </label>
+                  {selectedCourt &&
+                  hearingDate &&
+                  availableTimeSlots.length > 0 ? (
+                    <select
+                      value={hearingTime}
+                      onChange={(e) => setHearingTime(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      disabled={loadingTimeSlots}
+                    >
+                      <option value="">-- Select available time --</option>
+                      {availableTimeSlots.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  ) : selectedCourt &&
+                    hearingDate &&
+                    availableTimeSlots.length === 0 &&
+                    !loadingTimeSlots ? (
+                    <div className="w-full border border-red-300 rounded-md px-3 py-2 bg-red-50 text-red-700 text-sm">
+                      No available time slots for this date. Please choose a
+                      different date or courtroom.
+                    </div>
+                  ) : (
+                    <input
+                      type="time"
+                      value={hearingTime}
+                      onChange={(e) => setHearingTime(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder={
+                        selectedCourt && hearingDate
+                          ? "Loading available times..."
+                          : "Select court and date first"
+                      }
+                      disabled={loadingTimeSlots}
+                    />
+                  )}
+                  {loadingTimeSlots && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Loading available time slots...
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Courtroom *
+                  </label>
+                  <select
+                    value={selectedCourt}
+                    onChange={(e) => setSelectedCourt(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">-- Select a courtroom --</option>
+                    {availableCourts.map((court) => (
+                      <option key={court._id} value={court._id}>
+                        {court.name} - {court.location} ({court.type})
                       </option>
                     ))}
                   </select>
-                ) : selectedCourt &&
-                  hearingDate &&
-                  availableTimeSlots.length === 0 &&
-                  !loadingTimeSlots ? (
-                  <div className="w-full border border-red-300 rounded-md px-3 py-2 bg-red-50 text-red-700 text-sm">
-                    No available time slots for this date. Please choose a
-                    different date or courtroom.
-                  </div>
-                ) : (
-                  <input
-                    type="time"
-                    value={hearingTime}
-                    onChange={(e) => setHearingTime(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder={
-                      selectedCourt && hearingDate
-                        ? "Loading available times..."
-                        : "Select court and date first"
-                    }
-                    disabled={loadingTimeSlots}
-                  />
-                )}
-                {loadingTimeSlots && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Loading available time slots...
-                  </div>
-                )}
-              </div>
+                </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Courtroom *
-                </label>
-                <select
-                  value={selectedCourt}
-                  onChange={(e) => setSelectedCourt(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">-- Select a courtroom --</option>
-                  {availableCourts.map((court) => (
-                    <option key={court._id} value={court._id}>
-                      {court.name} - {court.location} ({court.type})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowHearingModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleScheduleHearing}
-                  disabled={!hearingDate || !hearingTime || !selectedCourt}
-                  className={`px-4 py-2 rounded-md transition-colors ${
-                    !hearingDate || !hearingTime || !selectedCourt
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-green-600 text-white hover:bg-green-700"
-                  }`}
-                >
-                  Schedule
-                </button>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowHearingModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleScheduleHearing}
+                    loading={scheduleHearingLoading}
+                    loadingText="Scheduling..."
+                    disabled={!hearingDate || !hearingTime || !selectedCourt}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    <FaCalendarAlt className="mr-2" />
+                    Schedule
+                  </LoadingButton>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
 
         {/* Toast Container */}

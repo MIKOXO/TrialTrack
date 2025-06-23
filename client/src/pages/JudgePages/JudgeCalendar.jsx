@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import { JudgePageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI } from "../../services/api";
@@ -40,6 +42,8 @@ const JudgeCalendar = () => {
   const [selectedCase, setSelectedCase] = useState(null);
   const [partyInput, setPartyInput] = useState("");
   const [availableCourts, setAvailableCourts] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   // Fetch data from backend
   useEffect(() => {
     const fetchData = async () => {
@@ -200,6 +204,7 @@ const JudgeCalendar = () => {
   const handleDeleteHearing = async (hearingId) => {
     if (window.confirm("Are you sure you want to delete this hearing?")) {
       try {
+        setDeleteLoading(true);
         const token = localStorage.getItem("token");
         if (!token) {
           showError("Authentication token not found. Please sign in again.");
@@ -222,6 +227,8 @@ const JudgeCalendar = () => {
           err.response?.data?.error ||
             "Failed to delete hearing. Please try again."
         );
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
@@ -288,6 +295,7 @@ const JudgeCalendar = () => {
     }
 
     try {
+      setScheduleLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         showError("Authentication token not found. Please sign in again.");
@@ -382,6 +390,8 @@ const JudgeCalendar = () => {
             "Failed to schedule hearing. Please try again."
         );
       }
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -398,9 +408,7 @@ const JudgeCalendar = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading calendar...</p>
-        </div>
+        <JudgePageLoader message="Loading calendar..." />
       </JudgeLayout>
     );
   }
@@ -842,12 +850,15 @@ const JudgeCalendar = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   onClick={handleScheduleHearing}
-                  className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300"
+                  loading={scheduleLoading}
+                  loadingText="Scheduling..."
+                  className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
                 >
+                  <FaCalendarAlt className="mr-2" />
                   Schedule Hearing
-                </button>
+                </LoadingButton>
               </div>
             </div>
           </div>

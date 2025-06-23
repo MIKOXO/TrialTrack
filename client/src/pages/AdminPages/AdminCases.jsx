@@ -4,6 +4,9 @@ import { casesAPI, authAPI } from "../../services/api";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import AdminLayout from "../../components/AdminLayout";
+import { AdminPageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
+import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import {
   FaEllipsisV,
   FaSearch,
@@ -325,9 +328,7 @@ const AdminCases = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading cases...</p>
-        </div>
+        <AdminPageLoader message="Loading cases..." />
       </AdminLayout>
     );
   }
@@ -693,101 +694,80 @@ const AdminCases = () => {
 
         {/* Assign Judge Modal */}
         {showAssignModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Assign Judge to Case
-                </h2>
-                <button
-                  onClick={closeAssignModal}
-                  disabled={assignLoading}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  ×
-                </button>
-              </div>
+          <FormLoadingOverlay
+            isVisible={assignLoading}
+            message="Assigning judge..."
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Assign Judge to Case
+                  </h2>
+                  <button
+                    onClick={closeAssignModal}
+                    disabled={assignLoading}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">Case:</p>
-                <p className="font-medium text-gray-900">
-                  {selectedCase?.title}
-                </p>
-                <p className="text-xs text-gray-500">ID: {selectedCase?.id}</p>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Judge *
-                </label>
-                <select
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
-                  value={selectedJudge}
-                  onChange={(e) => setSelectedJudge(e.target.value)}
-                  disabled={assignLoading}
-                >
-                  <option value="">-- Select a Judge --</option>
-                  {judges.map((judge) => (
-                    <option key={judge.id} value={judge.name}>
-                      {judge.name}
-                    </option>
-                  ))}
-                </select>
-                {judges.length === 0 && (
-                  <p className="text-sm text-red-600 mt-1">
-                    No judges available
+                <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                  <p className="text-sm text-gray-600">Case:</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedCase?.title}
                   </p>
-                )}
-              </div>
+                  <p className="text-xs text-gray-500">
+                    ID: {selectedCase?.id}
+                  </p>
+                </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={closeAssignModal}
-                  disabled={assignLoading}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ease-in-out duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAssignJudge}
-                  disabled={!selectedJudge || assignLoading}
-                  className={`px-4 py-2 rounded-md ease-in-out duration-300 flex items-center ${
-                    !selectedJudge || assignLoading
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-tertiary text-white hover:bg-green-700"
-                  }`}
-                >
-                  {assignLoading ? (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Assigning...
-                    </>
-                  ) : (
-                    "Assign Judge"
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Judge *
+                  </label>
+                  <select
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
+                    value={selectedJudge}
+                    onChange={(e) => setSelectedJudge(e.target.value)}
+                    disabled={assignLoading}
+                  >
+                    <option value="">-- Select a Judge --</option>
+                    {judges.map((judge) => (
+                      <option key={judge.id} value={judge.name}>
+                        {judge.name}
+                      </option>
+                    ))}
+                  </select>
+                  {judges.length === 0 && (
+                    <p className="text-sm text-red-600 mt-1">
+                      No judges available
+                    </p>
                   )}
-                </button>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={closeAssignModal}
+                    disabled={assignLoading}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ease-in-out duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleAssignJudge}
+                    loading={assignLoading}
+                    loadingText="Assigning..."
+                    disabled={!selectedJudge}
+                    className="bg-tertiary text-white px-4 py-2 rounded-md"
+                  >
+                    Assign Judge
+                  </LoadingButton>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
 
         {/* Change Status Modal */}

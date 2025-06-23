@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { commentsAPI } from "../../services/api";
 import ClientLayout from "../../components/ClientLayout";
+import LoadingButton from "../../components/LoadingButton";
 import { FaStar, FaRegStar, FaPaperPlane, FaCheckCircle } from "react-icons/fa";
 
 const ClientFeedback = () => {
@@ -204,27 +205,18 @@ const ClientFeedback = () => {
 
               {/* Submit Button */}
               <div className="flex justify-end">
-                <button
+                <LoadingButton
                   type="submit"
+                  loading={loading}
+                  loadingText="Submitting..."
                   disabled={
-                    loading ||
-                    !formData.subject.trim() ||
-                    !formData.message.trim()
+                    !formData.subject.trim() || !formData.message.trim()
                   }
-                  className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 focus:ring-offset-2"
                 >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <FaPaperPlane className="mr-2" />
-                      Submit Feedback
-                    </>
-                  )}
-                </button>
+                  <FaPaperPlane className="mr-2" />
+                  Submit Feedback
+                </LoadingButton>
               </div>
             </form>
           </div>

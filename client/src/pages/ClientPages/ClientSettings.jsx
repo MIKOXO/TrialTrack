@@ -13,6 +13,8 @@ import {
 import { authAPI } from "../../services/api";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
+import LoadingButton from "../../components/LoadingButton";
+import Spinner from "../../components/Spinner";
 
 const ClientSettings = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
@@ -298,7 +300,7 @@ const ClientSettings = () => {
                         />
                         {uploadLoading && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                            <Spinner size="sm" color="white" />
                           </div>
                         )}
                       </div>
@@ -384,14 +386,15 @@ const ClientSettings = () => {
                       className="w-full border border-gray-300 rounded-md px-4 py-4 bg-gray-100 text-gray-500"
                     />
                   </div>
-                  <button
+                  <LoadingButton
                     type="submit"
-                    disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    loading={loading}
+                    loadingText="Saving..."
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300"
                   >
-                    <FaSave />
-                    <span>{loading ? "Saving..." : "Save Changes"}</span>
-                  </button>
+                    <FaSave className="mr-2" />
+                    Save Changes
+                  </LoadingButton>
                 </form>
               </div>
             )}
@@ -448,14 +451,15 @@ const ClientSettings = () => {
                       className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
                   </div>
-                  <button
+                  <LoadingButton
                     type="submit"
-                    disabled={loading}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    loading={loading}
+                    loadingText="Changing..."
+                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300"
                   >
-                    <FaSave />
-                    <span>{loading ? "Changing..." : "Change Password"}</span>
-                  </button>
+                    <FaSave className="mr-2" />
+                    Change Password
+                  </LoadingButton>
                 </form>
               </div>
             )}

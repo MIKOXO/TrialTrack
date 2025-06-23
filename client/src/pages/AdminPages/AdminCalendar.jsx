@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import { AdminPageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import {
   FaCalendarAlt,
   FaClock,
@@ -329,9 +331,7 @@ const AdminCalendar = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading calendar...</p>
-        </div>
+        <AdminPageLoader message="Loading calendar..." />
       </AdminLayout>
     );
   }

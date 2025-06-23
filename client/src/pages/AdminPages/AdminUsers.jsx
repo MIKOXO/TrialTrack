@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import ProfileAvatar from "../../components/ProfileAvatar";
+import { AdminPageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
+import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import {
   FaSearch,
   FaEye,
@@ -251,9 +254,7 @@ const AdminUsers = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading users...</p>
-        </div>
+        <AdminPageLoader message="Loading users..." />
       </AdminLayout>
     );
   }
@@ -283,13 +284,13 @@ const AdminUsers = () => {
                 Manage all users in the court system.
               </p>
             </div>
-            <button
+            <LoadingButton
               onClick={() => setShowCreateJudgeModal(true)}
-              className="bg-tertiary text-white px-5 py-2 rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
+              className="bg-tertiary text-white px-7 py-2 rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
             >
               <FaGavel />
               <span>Add Judge</span>
-            </button>
+            </LoadingButton>
           </div>
         </div>
 
@@ -529,13 +530,14 @@ const AdminUsers = () => {
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   onClick={handleDeleteUser}
-                  disabled={deleteLoading}
+                  loading={deleteLoading}
+                  loadingText="Deleting..."
                   className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 ease-in-out duration-300"
                 >
-                  {deleteLoading ? "Deleting..." : "Delete User"}
-                </button>
+                  Delete User
+                </LoadingButton>
               </div>
             </div>
           </div>
@@ -543,163 +545,171 @@ const AdminUsers = () => {
 
         {/* Create Judge Modal */}
         {showCreateJudgeModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Add New Judge
-                  </h3>
-                  <button
-                    onClick={closeJudgeModal}
-                    className="text-gray-400 text-2xl hover:text-gray-600"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <form onSubmit={handleCreateJudge} className="space-y-4">
-                  <div className="mb-6 relative">
-                    <input
-                      type="text"
-                      name="username"
-                      value={newJudge.username}
-                      onChange={handleJudgeInputChange}
-                      className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
-                        judgeErrors.username
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-tertiary"
-                      }`}
-                    />
-                    <label
-                      className={`absolute left-6 text-gray-500 duration-200 transition-all ${
-                        newJudge.username
-                          ? " text-base -top-2.5 bg-white px-1"
-                          : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
-                      }`}
-                    >
-                      Full Name
-                    </label>
-                    {judgeErrors.username && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {judgeErrors.username}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mb-6 relative">
-                    <input
-                      type="email"
-                      name="email"
-                      value={newJudge.email}
-                      onChange={handleJudgeInputChange}
-                      className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
-                        judgeErrors.email
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-tertiary"
-                      }`}
-                    />
-                    <label
-                      className={`absolute left-6 text-gray-500 duration-200 transition-all ${
-                        newJudge.email
-                          ? " text-base -top-2.5 bg-white px-1"
-                          : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
-                      }`}
-                    >
-                      Email
-                    </label>
-                    {judgeErrors.email && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {judgeErrors.email}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mb-6 relative">
-                    <input
-                      type="password"
-                      name="password"
-                      value={newJudge.password}
-                      onChange={handleJudgeInputChange}
-                      onFocus={() => setIsPasswordFocused(true)}
-                      onBlur={() => setIsPasswordFocused(false)}
-                      className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
-                        judgeErrors.password
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-tertiary"
-                      }`}
-                    />
-                    <label
-                      className={`absolute left-6 text-gray-500 duration-200 transition-all ${
-                        newJudge.password
-                          ? " text-base -top-2.5 bg-white px-1"
-                          : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
-                      }`}
-                    >
-                      Password
-                    </label>
-                    {judgeErrors.password && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {judgeErrors.password}
-                      </p>
-                    )}
-                    {!judgeErrors.password &&
-                      isPasswordFocused &&
-                      !areAllPasswordRequirementsMet() && (
-                        <div className="transition-all duration-300 ease-in-out opacity-100 translate-y-0">
-                          <PasswordRequirements password={newJudge.password} />
-                        </div>
-                      )}
-                  </div>
-
-                  <div className="mb-6 relative">
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={newJudge.confirmPassword}
-                      onChange={handleJudgeInputChange}
-                      className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
-                        judgeErrors.confirmPassword
-                          ? "border-red-500 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-tertiary"
-                      }`}
-                    />
-                    <label
-                      className={`absolute left-6 text-gray-500 duration-200 transition-all ${
-                        newJudge.confirmPassword
-                          ? " text-base -top-2.5 bg-white px-1"
-                          : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
-                      }`}
-                    >
-                      Confirm Password
-                    </label>
-                    {judgeErrors.confirmPassword && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {judgeErrors.confirmPassword}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end space-x-3 pt-4">
+          <FormLoadingOverlay
+            isVisible={createJudgeLoading}
+            message="Creating judge..."
+          >
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div className="mt-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Add New Judge
+                    </h3>
                     <button
-                      type="button"
                       onClick={closeJudgeModal}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 ease-in-out duration-300 rounded-md hover:bg-gray-300"
+                      className="text-gray-400 text-2xl hover:text-gray-600"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={createJudgeLoading}
-                      className="px-5 py-3 text-sm font-medium text-white bg-tertiary ease-in-out duration-300 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {createJudgeLoading ? "Creating..." : "Create Judge"}
+                      ×
                     </button>
                   </div>
-                </form>
+
+                  <form onSubmit={handleCreateJudge} className="space-y-4">
+                    <div className="mb-6 relative">
+                      <input
+                        type="text"
+                        name="username"
+                        value={newJudge.username}
+                        onChange={handleJudgeInputChange}
+                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                          judgeErrors.username
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-tertiary"
+                        }`}
+                      />
+                      <label
+                        className={`absolute left-6 text-gray-500 duration-200 transition-all ${
+                          newJudge.username
+                            ? " text-base -top-2.5 bg-white px-1"
+                            : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                        }`}
+                      >
+                        Full Name
+                      </label>
+                      {judgeErrors.username && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {judgeErrors.username}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-6 relative">
+                      <input
+                        type="email"
+                        name="email"
+                        value={newJudge.email}
+                        onChange={handleJudgeInputChange}
+                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                          judgeErrors.email
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-tertiary"
+                        }`}
+                      />
+                      <label
+                        className={`absolute left-6 text-gray-500 duration-200 transition-all ${
+                          newJudge.email
+                            ? " text-base -top-2.5 bg-white px-1"
+                            : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                        }`}
+                      >
+                        Email
+                      </label>
+                      {judgeErrors.email && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {judgeErrors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mb-6 relative">
+                      <input
+                        type="password"
+                        name="password"
+                        value={newJudge.password}
+                        onChange={handleJudgeInputChange}
+                        onFocus={() => setIsPasswordFocused(true)}
+                        onBlur={() => setIsPasswordFocused(false)}
+                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                          judgeErrors.password
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-tertiary"
+                        }`}
+                      />
+                      <label
+                        className={`absolute left-6 text-gray-500 duration-200 transition-all ${
+                          newJudge.password
+                            ? " text-base -top-2.5 bg-white px-1"
+                            : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                        }`}
+                      >
+                        Password
+                      </label>
+                      {judgeErrors.password && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {judgeErrors.password}
+                        </p>
+                      )}
+                      {!judgeErrors.password &&
+                        isPasswordFocused &&
+                        !areAllPasswordRequirementsMet() && (
+                          <div className="transition-all duration-300 ease-in-out opacity-100 translate-y-0">
+                            <PasswordRequirements
+                              password={newJudge.password}
+                            />
+                          </div>
+                        )}
+                    </div>
+
+                    <div className="mb-6 relative">
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={newJudge.confirmPassword}
+                        onChange={handleJudgeInputChange}
+                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                          judgeErrors.confirmPassword
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-tertiary"
+                        }`}
+                      />
+                      <label
+                        className={`absolute left-6 text-gray-500 duration-200 transition-all ${
+                          newJudge.confirmPassword
+                            ? " text-base -top-2.5 bg-white px-1"
+                            : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                        }`}
+                      >
+                        Confirm Password
+                      </label>
+                      {judgeErrors.confirmPassword && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {judgeErrors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={closeJudgeModal}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 ease-in-out duration-300 rounded-md hover:bg-gray-300"
+                      >
+                        Cancel
+                      </button>
+                      <LoadingButton
+                        type="submit"
+                        loading={createJudgeLoading}
+                        loadingText="Creating..."
+                        className="px-5 py-3 text-sm font-medium text-white bg-tertiary ease-in-out duration-300 rounded-md hover:bg-green-700"
+                      >
+                        Create Judge
+                      </LoadingButton>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
 
         {/* User Details Modal */}

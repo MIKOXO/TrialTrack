@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
+import { JudgePageLoader } from "../../components/PageLoader";
+import LoadingButton from "../../components/LoadingButton";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI } from "../../services/api";
@@ -36,6 +38,8 @@ const JudgeHearingsPage = () => {
   const [hearingNotes, setHearingNotes] = useState("");
   const [availableCourts, setAvailableCourts] = useState([]);
   const [selectedCourt, setSelectedCourt] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Filter hearings based on search term and active tab
   useEffect(() => {
@@ -214,6 +218,7 @@ const JudgeHearingsPage = () => {
       return;
 
     try {
+      setEditLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         alert("Authentication token not found");
@@ -285,6 +290,8 @@ const JudgeHearingsPage = () => {
             "Failed to update hearing. Please try again."
         );
       }
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -292,6 +299,7 @@ const JudgeHearingsPage = () => {
     if (!selectedHearing) return;
 
     try {
+      setDeleteLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         alert("Authentication token not found");
@@ -335,6 +343,8 @@ const JudgeHearingsPage = () => {
             "Failed to delete hearing. Please try again."
         );
       }
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -400,9 +410,7 @@ const JudgeHearingsPage = () => {
   if (loading) {
     return (
       <JudgeLayout>
-        <div className="flex justify-center items-center h-full">
-          <p className="text-lg">Loading hearings...</p>
-        </div>
+        <JudgePageLoader message="Loading hearings..." />
       </JudgeLayout>
     );
   }
@@ -739,17 +747,16 @@ const JudgeHearingsPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleEditHearing}
+                loading={editLoading}
+                loadingText="Updating..."
                 disabled={!hearingDate || !hearingTime || !selectedCourt}
-                className={`px-4 py-2 rounded-md transition-colors ${
-                  !hearingDate || !hearingTime || !selectedCourt
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 text-white hover:bg-green-700"
-                }`}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
               >
+                <FaEdit className="mr-2" />
                 Update Hearing
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -773,12 +780,15 @@ const JudgeHearingsPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleDeleteHearing}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                loading={deleteLoading}
+                loadingText="Deleting..."
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
               >
+                <FaTrashAlt className="mr-2" />
                 Delete
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>
@@ -800,12 +810,15 @@ const JudgeHearingsPage = () => {
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 onClick={handleDeleteHearing}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                loading={deleteLoading}
+                loadingText="Deleting..."
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center"
               >
+                <FaTrashAlt className="mr-2" />
                 Delete
-              </button>
+              </LoadingButton>
             </div>
           </div>
         </div>

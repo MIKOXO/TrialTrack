@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import ClientLayout from "../../components/ClientLayout";
 import { casesAPI, documentsAPI } from "../../services/api";
+import Spinner from "../../components/Spinner";
+import LoadingButton from "../../components/LoadingButton";
 import {
   FaUpload,
   FaFile,
@@ -477,7 +479,7 @@ const NewCaseDocuments = () => {
                   className="cursor-pointer flex flex-col items-center justify-center"
                 >
                   {uploadLoading ? (
-                    <FaSpinner className="text-green-500 text-3xl mb-2 animate-spin" />
+                    <Spinner size="2xl" color="green" className="mb-2" />
                   ) : (
                     <FaUpload
                       className={`text-3xl mb-2 ${
@@ -754,25 +756,19 @@ const NewCaseDocuments = () => {
               >
                 Back
               </button>
-              <button
+              <LoadingButton
                 type="submit"
-                disabled={loading || submitSuccess}
-                className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 disabled:opacity-50"
+                loading={loading || checkingDuplicates}
+                loadingText={
+                  checkingDuplicates
+                    ? "Checking for duplicates..."
+                    : "Filing Case..."
+                }
+                disabled={submitSuccess}
+                className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300"
               >
-                {checkingDuplicates ? (
-                  <>
-                    <FaSpinner className="animate-spin mr-2" />
-                    Checking for duplicates...
-                  </>
-                ) : loading ? (
-                  <>
-                    <FaSpinner className="animate-spin mr-2" />
-                    Filing Case...
-                  </>
-                ) : (
-                  "Submit Case"
-                )}
-              </button>
+                Submit Case
+              </LoadingButton>
             </div>
           </form>
         </div>
