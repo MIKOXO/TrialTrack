@@ -92,6 +92,9 @@ const ClientSettings = () => {
       const updatedUser = { ...storedUser, ...profileData };
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
+      // Dispatch custom event to update navbar in real-time
+      window.dispatchEvent(new CustomEvent("userUpdated"));
+
       showSuccess("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -206,6 +209,9 @@ const ClientSettings = () => {
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
+      // Dispatch custom event to update navbar in real-time
+      window.dispatchEvent(new CustomEvent("userUpdated"));
+
       showSuccess("Profile picture updated successfully!");
     } catch (error) {
       console.error("Error uploading profile picture:", error);
@@ -229,6 +235,9 @@ const ClientSettings = () => {
       setProfilePicture(null);
       const updatedUser = { ...storedUser, profilePicture: null };
       localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // Dispatch custom event to update navbar in real-time
+      window.dispatchEvent(new CustomEvent("userUpdated"));
 
       showSuccess("Profile picture removed successfully!");
     } catch (error) {

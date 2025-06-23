@@ -108,6 +108,9 @@ const loginUser = asyncHandler(async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        profilePicture: user.profilePicture,
+        firstName: user.firstName,
+        lastName: user.lastName,
       },
     });
   } else {
@@ -126,13 +129,17 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @route   GET api/auth/me
 // @access  Private
 const getMe = asyncHandler(async (req, res) => {
-  const { _id, username, email, role } = await User.findById(req.user.id);
+  const { _id, username, email, role, profilePicture, firstName, lastName } =
+    await User.findById(req.user.id);
 
   res.status(200).json({
     id: _id,
     username,
     email,
     role,
+    profilePicture,
+    firstName,
+    lastName,
   });
 });
 
