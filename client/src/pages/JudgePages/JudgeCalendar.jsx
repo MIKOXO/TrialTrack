@@ -4,6 +4,7 @@ import axios from "axios";
 import JudgeLayout from "../../components/JudgeLayout";
 import { JudgePageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
+import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI } from "../../services/api";
@@ -42,6 +43,8 @@ const JudgeCalendar = () => {
   const [selectedCase, setSelectedCase] = useState(null);
   const [partyInput, setPartyInput] = useState("");
   const [availableCourts, setAvailableCourts] = useState([]);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   // Fetch data from backend
@@ -116,6 +119,47 @@ const JudgeCalendar = () => {
 
     fetchData();
   }, []);
+
+  // Fetch available time slots for selected court and date
+  const fetchAvailableTimeSlots = async (courtId, date) => {
+    if (!courtId || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    try {
+      setLoadingTimeSlots(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        showError("Authentication token not found. Please sign in again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:3001/api/hearings/available-slots/${courtId}/${date}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAvailableTimeSlots(response.data.availableSlots);
+    } catch (err) {
+      console.error("Error fetching available time slots:", err);
+      setAvailableTimeSlots([]);
+      // Don't show error for this as it's not critical
+    } finally {
+      setLoadingTimeSlots(false);
+    }
+  };
+
+  // Fetch available time slots when court or date changes
+  useEffect(() => {
+    if (newHearing.selectedCourt && newHearing.date) {
+      fetchAvailableTimeSlots(newHearing.selectedCourt, newHearing.date);
+    }
+  }, [newHearing.selectedCourt, newHearing.date]);
 
   // Group hearings by date
   const groupHearingsByDate = () => {
@@ -237,12 +281,16 @@ const JudgeCalendar = () => {
     setNewHearing({
       ...newHearing,
       date: date || formatDate(new Date()),
+      time: "",
+      selectedCourt: "",
     });
+    setSelectedCase(null);
+    setAvailableTimeSlots([]);
     setShowScheduleModal(true);
   };
 
   const handleCaseSelect = (e) => {
-    const caseId = parseInt(e.target.value);
+    const caseId = e.target.value;
     const selectedCase = availableCases.find((c) => c.id === caseId);
 
     if (selectedCase) {
@@ -354,6 +402,7 @@ const JudgeCalendar = () => {
           type: "Civil",
         });
         setSelectedCase(null);
+        setAvailableTimeSlots([]);
         showSuccess(
           `Hearing successfully scheduled for "${
             selectedCase.title
@@ -720,149 +769,244 @@ const JudgeCalendar = () => {
 
         {/* Schedule Hearing Modal */}
         {showScheduleModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-              <h2 className="text-xl font-semibold mb-4">
-                Schedule New Hearing
-              </h2>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Select Case *
-                </label>
-                <select
-                  value={selectedCase?.id || ""}
-                  onChange={handleCaseSelect}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                >
-                  <option value="">-- Select a case --</option>
-                  {availableCases.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title} ({c.caseNumber})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={newHearing.date}
-                    onChange={(e) =>
-                      setNewHearing({ ...newHearing, date: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Time *
-                  </label>
-                  <input
-                    type="time"
-                    value={newHearing.time}
-                    onChange={(e) =>
-                      setNewHearing({ ...newHearing, time: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Location *
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Courtroom 302"
-                  value={newHearing.location}
-                  onChange={(e) =>
-                    setNewHearing({ ...newHearing, location: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                />
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Parties
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    placeholder="Add party name"
-                    value={partyInput}
-                    onChange={(e) => setPartyInput(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                  />
+          <FormLoadingOverlay
+            isVisible={scheduleLoading}
+            message="Scheduling hearing..."
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+              <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-xl mx-auto my-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Schedule Hearing
+                  </h2>
                   <button
-                    onClick={handleAddParty}
-                    className="px-4 py-2 bg-tertiary text-white rounded-r-md hover:bg-green-700 ease-in-out duration-300"
+                    onClick={() => {
+                      setShowScheduleModal(false);
+                      setAvailableTimeSlots([]);
+                      setSelectedCase(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
                   >
-                    Add
+                    ×
                   </button>
                 </div>
-                {newHearing.parties.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {newHearing.parties.map((party, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center bg-gray-100 px-2 py-1 rounded text-sm"
-                      >
-                        <span>{party}</span>
-                        <button
-                          onClick={() => handleRemoveParty(index)}
-                          className="ml-2 text-gray-500 hover:text-red-500"
-                        >
-                          &times;
-                        </button>
-                      </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Select Case *
+                  </label>
+                  <select
+                    value={selectedCase?.id || ""}
+                    onChange={handleCaseSelect}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  >
+                    <option value="">-- Select a case --</option>
+                    {availableCases.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title} ({c.caseNumber})
+                      </option>
                     ))}
+                  </select>
+                </div>
+
+                {selectedCase && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                    <p className="text-sm text-gray-600">Case:</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedCase.title}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ID: {selectedCase.caseNumber}
+                    </p>
                   </div>
                 )}
-              </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-2">
-                  Notes
-                </label>
-                <textarea
-                  placeholder="Add any notes about this hearing"
-                  value={newHearing.notes}
-                  onChange={(e) =>
-                    setNewHearing({ ...newHearing, notes: e.target.value })
-                  }
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
-                ></textarea>
-              </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={newHearing.date}
+                      onChange={(e) =>
+                        setNewHearing({ ...newHearing, date: e.target.value })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                  </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowScheduleModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 ease-in-out duration-300"
-                >
-                  Cancel
-                </button>
-                <LoadingButton
-                  onClick={handleScheduleHearing}
-                  loading={scheduleLoading}
-                  loadingText="Scheduling..."
-                  className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
-                >
-                  <FaCalendarAlt className="mr-2" />
-                  Schedule Hearing
-                </LoadingButton>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Time *
+                      {newHearing.selectedCourt && newHearing.date && (
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({availableTimeSlots.length} slots available)
+                        </span>
+                      )}
+                    </label>
+                    {newHearing.selectedCourt &&
+                    newHearing.date &&
+                    availableTimeSlots.length > 0 ? (
+                      <select
+                        value={newHearing.time}
+                        onChange={(e) =>
+                          setNewHearing({ ...newHearing, time: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                        disabled={loadingTimeSlots}
+                      >
+                        <option value="">-- Select available time --</option>
+                        {availableTimeSlots.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    ) : newHearing.selectedCourt &&
+                      newHearing.date &&
+                      availableTimeSlots.length === 0 &&
+                      !loadingTimeSlots ? (
+                      <div className="w-full border border-red-300 rounded-md px-3 py-2 bg-red-50 text-red-700 text-sm">
+                        No available time slots for this date. Please choose a
+                        different date or courtroom.
+                      </div>
+                    ) : (
+                      <input
+                        type="time"
+                        value={newHearing.time}
+                        onChange={(e) =>
+                          setNewHearing({ ...newHearing, time: e.target.value })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                        placeholder={
+                          newHearing.selectedCourt && newHearing.date
+                            ? "Loading available times..."
+                            : "Select court and date first"
+                        }
+                        disabled={loadingTimeSlots}
+                      />
+                    )}
+                    {loadingTimeSlots && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Loading available time slots...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Courtroom *
+                  </label>
+                  <select
+                    value={newHearing.selectedCourt}
+                    onChange={(e) =>
+                      setNewHearing({
+                        ...newHearing,
+                        selectedCourt: e.target.value,
+                        time: "",
+                      })
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  >
+                    <option value="">-- Select a courtroom --</option>
+                    {availableCourts.map((court) => (
+                      <option key={court._id} value={court._id}>
+                        {court.name} - {court.location} ({court.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Parties
+                  </label>
+                  <div className="flex">
+                    <input
+                      type="text"
+                      placeholder="Add party name"
+                      value={partyInput}
+                      onChange={(e) => setPartyInput(e.target.value)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                    />
+                    <button
+                      onClick={handleAddParty}
+                      className="px-4 py-2 bg-tertiary text-white rounded-r-md hover:bg-green-700 ease-in-out duration-300"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {newHearing.parties.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {newHearing.parties.map((party, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center bg-gray-100 px-2 py-1 rounded text-sm"
+                        >
+                          <span>{party}</span>
+                          <button
+                            onClick={() => handleRemoveParty(index)}
+                            className="ml-2 text-gray-500 hover:text-red-500"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    placeholder="Add any notes about this hearing"
+                    value={newHearing.notes}
+                    onChange={(e) =>
+                      setNewHearing({ ...newHearing, notes: e.target.value })
+                    }
+                    rows="3"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-tertiary"
+                  ></textarea>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowScheduleModal(false);
+                      setAvailableTimeSlots([]);
+                      setSelectedCase(null);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 ease-in-out duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleScheduleHearing}
+                    loading={scheduleLoading}
+                    loadingText="Scheduling..."
+                    disabled={
+                      !selectedCase ||
+                      !newHearing.date ||
+                      !newHearing.time ||
+                      !newHearing.selectedCourt
+                    }
+                    className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <FaCalendarAlt className="mr-2" />
+                    Schedule
+                  </LoadingButton>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
+
+        {/* Toast Container */}
+        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </JudgeLayout>
     </section>
   );
