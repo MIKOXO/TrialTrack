@@ -137,7 +137,12 @@ const JudgeHearingsPage = () => {
             status: status,
             parties: [], // Backend doesn't store parties separately
             notes: hearing.notes || "",
-            type: "General",
+            type: hearing.case?.caseType
+              ? hearing.case.caseType === "smallClaims"
+                ? "SmallClaims"
+                : hearing.case.caseType.charAt(0).toUpperCase() +
+                  hearing.case.caseType.slice(1)
+              : "General",
             hearingDateTime: hearingDateTime, // Store for sorting
           };
         });

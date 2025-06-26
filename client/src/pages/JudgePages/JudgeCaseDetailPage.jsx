@@ -6,7 +6,7 @@ import { JudgePageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
-import { courtsAPI } from "../../services/api";
+import { courtsAPI, documentsAPI } from "../../services/api";
 import {
   FaArrowLeft,
   FaCalendarAlt,
@@ -17,6 +17,12 @@ import {
   FaClock,
   FaMapMarkerAlt,
   FaPlus,
+  FaFolder,
+  FaDownload,
+  FaEye,
+  FaFilePdf,
+  FaFileImage,
+  FaFileWord,
 } from "react-icons/fa";
 
 const JudgeCaseDetailPage = () => {
@@ -26,7 +32,9 @@ const JudgeCaseDetailPage = () => {
 
   const [caseData, setCaseData] = useState(null);
   const [hearings, setHearings] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showHearingModal, setShowHearingModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
@@ -85,6 +93,10 @@ const JudgeCaseDetailPage = () => {
       );
 
       setHearings(caseHearings);
+
+      // Fetch documents for this case
+      await fetchDocuments();
+
       setLoading(false);
     } catch (err) {
       console.error("Error fetching case details:", err);
@@ -100,6 +112,141 @@ const JudgeCaseDetailPage = () => {
     } catch (err) {
       console.error("Error fetching courts:", err);
       showError("Failed to load courts. Please try again later.");
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      setDocumentsLoading(true);
+      console.log("Fetching documents for case:", id);
+      const response = await documentsAPI.getCaseDocuments(id);
+      console.log("Documents response:", response.data);
+      setDocuments(response.data);
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+      // Don't show error for documents as it's not critical
+      setDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  // Helper function to get file icon based on mime type
+  const getFileIcon = (mimeType) => {
+    if (mimeType.includes("pdf")) {
+      return <FaFilePdf className="text-red-500" />;
+    } else if (mimeType.includes("image")) {
+      return <FaFileImage className="text-green-500" />;
+    } else if (mimeType.includes("word") || mimeType.includes("document")) {
+      return <FaFileWord className="text-blue-500" />;
+    } else {
+      return <FaFileAlt className="text-gray-500" />;
+    }
+  };
+
+  // Helper function to format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  // Handle document download
+  const handleDocumentDownload = async (document) => {
+    try {
+      console.log("=== DOWNLOAD DEBUG ===");
+      console.log("Full document object:", document);
+      console.log("Case ID:", id);
+      console.log("Document name field:", document.name);
+      console.log("Document originalName field:", document.originalName);
+      console.log("Document _id:", document._id);
+
+      // Try the API call
+      console.log(
+        "Making API call to:",
+        `/api/documents/view/${id}/${document.name}?download=true`
+      );
+      const response = await documentsAPI.downloadDocument(id, document.name);
+      console.log("Download response received:", response);
+      console.log("Response data type:", typeof response.data);
+      console.log("Response data size:", response.data.size);
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", document.originalName || document.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showSuccess(`Downloaded ${document.originalName || document.name}`);
+    } catch (err) {
+      console.error("=== DOWNLOAD ERROR ===");
+      console.error("Full error object:", err);
+      console.error("Error response:", err.response);
+      console.error("Error status:", err.response?.status);
+      console.error("Error data:", err.response?.data);
+      console.error("Error message:", err.message);
+
+      // Show more specific error message
+      if (err.response?.status === 404) {
+        showError("Document not found. It may have been deleted or moved.");
+      } else if (err.response?.status === 403) {
+        showError(
+          "Access denied. You don't have permission to download this document."
+        );
+      } else {
+        showError(
+          `Failed to download document: ${
+            err.response?.data?.error || err.message
+          }`
+        );
+      }
+    }
+  };
+
+  // Handle document view
+  const handleDocumentView = async (document) => {
+    try {
+      console.log("=== VIEW DEBUG ===");
+      console.log("Full document object:", document);
+      console.log("Case ID:", id);
+      console.log("Document name field:", document.name);
+      console.log(
+        "Making API call to:",
+        `/api/documents/view/${id}/${document.name}`
+      );
+
+      const response = await documentsAPI.viewDocument(id, document.name);
+      console.log("View response received:", response);
+      console.log("Response data type:", typeof response.data);
+      console.log("Response data size:", response.data.size);
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      window.open(url, "_blank");
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("=== VIEW ERROR ===");
+      console.error("Full error object:", err);
+      console.error("Error response:", err.response);
+      console.error("Error status:", err.response?.status);
+      console.error("Error data:", err.response?.data);
+      console.error("Error message:", err.message);
+
+      // Show more specific error message
+      if (err.response?.status === 404) {
+        showError("Document not found. It may have been deleted or moved.");
+      } else if (err.response?.status === 403) {
+        showError(
+          "Access denied. You don't have permission to view this document."
+        );
+      } else {
+        showError(
+          `Failed to view document: ${err.response?.data?.error || err.message}`
+        );
+      }
     }
   };
 
@@ -384,7 +531,12 @@ const JudgeCaseDetailPage = () => {
                   Type
                 </label>
                 <p className="text-gray-900">
-                  {caseData.type || "Not specified"}
+                  {caseData.caseType
+                    ? caseData.caseType === "smallClaims"
+                      ? "SmallClaims"
+                      : caseData.caseType.charAt(0).toUpperCase() +
+                        caseData.caseType.slice(1)
+                    : "Not specified"}
                 </p>
               </div>
               <div>
@@ -484,6 +636,79 @@ const JudgeCaseDetailPage = () => {
                       >
                         View Details
                       </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Documents */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium flex items-center">
+                <FaFolder className="mr-2 text-green-600" />
+                Documents ({documents.length})
+              </h2>
+            </div>
+
+            {documentsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading documents...</p>
+              </div>
+            ) : documents.length === 0 ? (
+              <div className="text-center py-8">
+                <FaFolder className="mx-auto text-gray-400 text-4xl mb-4" />
+                <p className="text-gray-500">
+                  No documents found for this case.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {documents.map((document) => (
+                  <div
+                    key={document._id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-2xl">
+                          {getFileIcon(document.mimeType)}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">
+                            {document.originalName || document.name}
+                          </h4>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <span>{formatFileSize(document.size)}</span>
+                            <span>
+                              Uploaded:{" "}
+                              {new Date(
+                                document.uploadDate || document.createdAt
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleDocumentView(document)}
+                          className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                          title="View Document"
+                        >
+                          <FaEye className="mr-1" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDocumentDownload(document)}
+                          className="flex items-center px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                          title="Download Document"
+                        >
+                          <FaDownload className="mr-1" />
+                          Download
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

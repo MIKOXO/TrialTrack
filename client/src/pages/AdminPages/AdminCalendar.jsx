@@ -1,8 +1,10 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
+import axios from "axios";
 import AdminLayout from "../../components/AdminLayout";
 import { AdminPageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
+import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import {
   FaCalendarAlt,
   FaClock,
@@ -36,6 +38,9 @@ const AdminCalendar = () => {
 
   // State for courtrooms
   const [courtrooms, setCourtrooms] = useState([]);
+
+  // State for cases
+  const [cases, setCases] = useState([]);
 
   // Fetch data from backend
   useEffect(() => {
@@ -82,6 +87,25 @@ const AdminCalendar = () => {
           console.warn("Could not fetch courts:", courtError);
         }
 
+        // Fetch cases
+        try {
+          const casesResponse = await casesAPI.getCases();
+          const casesData = casesResponse.data;
+
+          // Transform cases for display
+          const transformedCases = casesData.map((caseItem) => ({
+            id: caseItem._id,
+            title: caseItem.title,
+            caseNumber: caseItem.caseNumber,
+            client: caseItem.client,
+            status: caseItem.status,
+          }));
+
+          setCases(transformedCases);
+        } catch (caseError) {
+          console.warn("Could not fetch cases:", caseError);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error("Error fetching calendar data:", err);
@@ -99,14 +123,19 @@ const AdminCalendar = () => {
   const [showEditCourtroomModal, setShowEditCourtroomModal] = useState(false);
   const [selectedCourtroom, setSelectedCourtroom] = useState(null);
 
+  // Loading states
+  const [addEventLoading, setAddEventLoading] = useState(false);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+
+  // Time checking states
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [selectedCourtId, setSelectedCourtId] = useState("");
+  const [selectedCase, setSelectedCase] = useState(null);
+
   // Form states
   const [newEvent, setNewEvent] = useState({
-    title: "",
     date: "",
     startTime: "",
-    endTime: "",
-    courtroom: "",
-    type: "Hearing",
   });
 
   const [newCourtroom, setNewCourtroom] = useState({
@@ -114,6 +143,13 @@ const AdminCalendar = () => {
     location: "",
     capacity: 50,
   });
+
+  // Fetch available time slots when court or date changes
+  useEffect(() => {
+    if (selectedCourtId && newEvent.date) {
+      fetchAvailableTimeSlots(selectedCourtId, newEvent.date);
+    }
+  }, [selectedCourtId, newEvent.date]);
 
   // Calendar navigation
   const nextMonth = () => {
@@ -126,6 +162,40 @@ const AdminCalendar = () => {
     setCurrentMonth(
       new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
     );
+  };
+
+  // Fetch available time slots for selected court and date
+  const fetchAvailableTimeSlots = async (courtId, date) => {
+    if (!courtId || !date) {
+      setAvailableTimeSlots([]);
+      return;
+    }
+
+    try {
+      setLoadingTimeSlots(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Authentication token not found. Please sign in again.");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:3001/api/hearings/available-slots/${courtId}/${date}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAvailableTimeSlots(response.data.availableSlots);
+    } catch (err) {
+      console.error("Error fetching available time slots:", err);
+      setAvailableTimeSlots([]);
+      // Don't show error for this as it's not critical
+    } finally {
+      setLoadingTimeSlots(false);
+    }
   };
 
   // Format month and year for display
@@ -189,49 +259,72 @@ const AdminCalendar = () => {
   };
 
   // Handle adding a new event
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (
-      !newEvent.title ||
+      !selectedCase ||
       !newEvent.date ||
       !newEvent.startTime ||
-      !newEvent.courtroom
+      !selectedCourtId
     ) {
       alert("Please fill in all required fields");
       return;
     }
 
-    // Check for time conflicts in the same courtroom
-    const conflictingEvent = events.find(
-      (event) =>
-        event.date === newEvent.date &&
-        event.courtroom === newEvent.courtroom &&
-        event.startTime === newEvent.startTime
-    );
+    try {
+      setAddEventLoading(true);
 
-    if (conflictingEvent) {
-      alert(
-        `Time conflict detected! ${newEvent.courtroom} is already booked at ${newEvent.startTime} on ${newEvent.date}`
+      // Get selected courtroom details
+      const selectedCourtroom = courtrooms.find(
+        (courtroom) => courtroom.id === selectedCourtId
       );
-      return;
+
+      // Check for time conflicts in the same courtroom
+      const conflictingEvent = events.find(
+        (event) =>
+          event.date === newEvent.date &&
+          event.courtroom === selectedCourtroom?.name &&
+          event.startTime === newEvent.startTime
+      );
+
+      if (conflictingEvent) {
+        alert(
+          `Time conflict detected! ${selectedCourtroom?.name} is already booked at ${newEvent.startTime} on ${newEvent.date}`
+        );
+        return;
+      }
+
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const eventToAdd = {
+        id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
+        title: `${selectedCase?.title} - Hearing`, // Include case title
+        date: newEvent.date,
+        startTime: newEvent.startTime,
+        endTime: "", // Default empty
+        courtroom: selectedCourtroom?.name || "",
+        type: "Hearing", // Default type
+        caseId: selectedCase?.id,
+        caseNumber: selectedCase?.caseNumber,
+      };
+
+      setEvents([...events, eventToAdd]);
+      setShowAddEventModal(false);
+      setNewEvent({
+        date: selectedDate,
+        startTime: "",
+      });
+      setSelectedCase(null);
+      setSelectedCourtId("");
+      setAvailableTimeSlots([]);
+
+      alert("Hearing scheduled successfully!");
+    } catch (error) {
+      console.error("Error scheduling hearing:", error);
+      alert("Failed to schedule hearing. Please try again.");
+    } finally {
+      setAddEventLoading(false);
     }
-
-    const eventToAdd = {
-      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID
-      ...newEvent,
-    };
-
-    setEvents([...events, eventToAdd]);
-    setShowAddEventModal(false);
-    setNewEvent({
-      title: "",
-      date: selectedDate,
-      startTime: "",
-      endTime: "",
-      courtroom: "",
-      type: "Hearing",
-    });
-
-    alert("Event added successfully!");
   };
 
   // Handle adding a new courtroom
@@ -318,9 +411,12 @@ const AdminCalendar = () => {
   // Initialize new event with selected date when opening modal
   const openAddEventModal = () => {
     setNewEvent({
-      ...newEvent,
       date: selectedDate,
+      startTime: "",
     });
+    setSelectedCase(null);
+    setSelectedCourtId("");
+    setAvailableTimeSlots([]);
     setShowAddEventModal(true);
   };
 
@@ -614,126 +710,162 @@ const AdminCalendar = () => {
 
         {/* Add Event Modal */}
         {showAddEventModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">Add New Event</h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Title*
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    value={newEvent.title}
-                    onChange={(e) =>
-                      setNewEvent({ ...newEvent, title: e.target.value })
-                    }
-                    placeholder="Enter event title"
-                  />
+          <FormLoadingOverlay
+            isVisible={addEventLoading}
+            message="Scheduling hearing..."
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Schedule Hearing
+                  </h2>
+                  <button
+                    onClick={() => setShowAddEventModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-xl"
+                  >
+                    ×
+                  </button>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date*
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    value={newEvent.date}
-                    onChange={(e) =>
-                      setNewEvent({ ...newEvent, date: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Time*
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      value={newEvent.startTime}
-                      onChange={(e) =>
-                        setNewEvent({ ...newEvent, startTime: e.target.value })
-                      }
-                      placeholder="e.g. 9:00AM"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Time
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                      value={newEvent.endTime}
-                      onChange={(e) =>
-                        setNewEvent({ ...newEvent, endTime: e.target.value })
-                      }
-                      placeholder="e.g. 10:30AM"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Courtroom*
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Case *
                   </label>
                   <select
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    value={newEvent.courtroom}
-                    onChange={(e) =>
-                      setNewEvent({ ...newEvent, courtroom: e.target.value })
-                    }
+                    value={selectedCase?.id || ""}
+                    onChange={(e) => {
+                      const caseId = e.target.value;
+                      const caseItem = cases.find((c) => c.id === caseId);
+                      setSelectedCase(caseItem || null);
+                    }}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
-                    <option value="">Select a courtroom</option>
-                    {courtrooms.map((courtroom) => (
-                      <option key={courtroom.id} value={courtroom.name}>
-                        {courtroom.name}
+                    <option value="">-- Select a case --</option>
+                    {cases.map((caseItem) => (
+                      <option key={caseItem.id} value={caseItem.id}>
+                        {caseItem.title} (ID: {caseItem.caseNumber})
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Type
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newEvent.date}
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, date: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Time *
+                    {selectedCourtId && newEvent.date && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({availableTimeSlots.length} slots available)
+                      </span>
+                    )}
+                  </label>
+                  {selectedCourtId &&
+                  newEvent.date &&
+                  availableTimeSlots.length > 0 ? (
+                    <select
+                      value={newEvent.startTime}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, startTime: e.target.value })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      disabled={loadingTimeSlots}
+                    >
+                      <option value="">-- Select available time --</option>
+                      {availableTimeSlots.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  ) : selectedCourtId &&
+                    newEvent.date &&
+                    availableTimeSlots.length === 0 &&
+                    !loadingTimeSlots ? (
+                    <div className="w-full border border-red-300 rounded-md px-3 py-2 bg-red-50 text-red-700 text-sm">
+                      No available time slots for this date. Please choose a
+                      different date or courtroom.
+                    </div>
+                  ) : (
+                    <input
+                      type="time"
+                      value={newEvent.startTime}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, startTime: e.target.value })
+                      }
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder={
+                        selectedCourtId && newEvent.date
+                          ? "Loading available times..."
+                          : "Select court and date first"
+                      }
+                      disabled={loadingTimeSlots}
+                    />
+                  )}
+                  {loadingTimeSlots && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Loading available time slots...
+                    </div>
+                  )}
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Courtroom *
                   </label>
                   <select
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    value={newEvent.type}
-                    onChange={(e) =>
-                      setNewEvent({ ...newEvent, type: e.target.value })
-                    }
+                    value={selectedCourtId}
+                    onChange={(e) => setSelectedCourtId(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
-                    <option value="Hearing">Hearing</option>
-                    <option value="Trial">Trial</option>
-                    <option value="Conference">Conference</option>
-                    <option value="Other">Other</option>
+                    <option value="">-- Select a courtroom --</option>
+                    {courtrooms.map((courtroom) => (
+                      <option key={courtroom.id} value={courtroom.id}>
+                        {courtroom.name} - {courtroom.location}
+                      </option>
+                    ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => setShowAddEventModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddEvent}
-                  className="px-4 py-2 rounded-md bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
-                >
-                  Add Event
-                </button>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowAddEventModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <LoadingButton
+                    onClick={handleAddEvent}
+                    loading={addEventLoading}
+                    loadingText="Scheduling..."
+                    disabled={
+                      !selectedCase ||
+                      !newEvent.date ||
+                      !newEvent.startTime ||
+                      !selectedCourtId
+                    }
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    <FaCalendarAlt className="mr-2" />
+                    Schedule
+                  </LoadingButton>
+                </div>
               </div>
             </div>
-          </div>
+          </FormLoadingOverlay>
         )}
 
         {/* Add Courtroom Modal */}

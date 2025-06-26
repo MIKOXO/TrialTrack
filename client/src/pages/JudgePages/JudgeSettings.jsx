@@ -264,8 +264,12 @@ const JudgeSettings = () => {
 
   return (
     <section>
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="sidebar-layout-top-right"
+      />
       <JudgeLayout>
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div className="mb-4">
           <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
           <p className="text-gray-600 font-light">

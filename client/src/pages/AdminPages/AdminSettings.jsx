@@ -262,8 +262,12 @@ const AdminSettings = () => {
 
   return (
     <section>
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="admin-top-right"
+      />
       <AdminLayout>
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
         <div className="mb-4 ">
           <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
           <p className="text-gray-600 font-light">

@@ -12,8 +12,18 @@ import {
   FaPlus,
   FaGavel,
   FaTimes,
+  FaEyeSlash,
+  FaUser,
+  FaEnvelope,
+  FaFileAlt,
+  FaCalendarAlt,
+  FaClock,
+  FaChartBar,
+  FaHistory,
+  FaCheckCircle,
+  FaExclamationCircle,
 } from "react-icons/fa";
-import { authAPI } from "../../services/api";
+import { authAPI, casesAPI, hearingsAPI } from "../../services/api";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { validatePasswordStrength } from "../../utils/passwordValidation";
@@ -41,6 +51,7 @@ const AdminUsers = () => {
   });
   const [judgeErrors, setJudgeErrors] = useState({});
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Fetch users data from backend
   const fetchUsers = async () => {
@@ -249,6 +260,7 @@ const AdminUsers = () => {
       confirmPassword: "",
     });
     setJudgeErrors({});
+    setShowPassword(false);
   };
 
   if (loading) {
@@ -577,6 +589,12 @@ const AdminUsers = () => {
                             : "border-gray-300 focus:ring-tertiary"
                         }`}
                       />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-4 text-gray-400 hover:text-tertiary transition-colors"
+                      >
+                        <FaUser />
+                      </button>
                       <label
                         className={`absolute left-6 text-gray-500 duration-200 transition-all ${
                           newJudge.username
@@ -605,6 +623,12 @@ const AdminUsers = () => {
                             : "border-gray-300 focus:ring-tertiary"
                         }`}
                       />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-4 text-gray-400 hover:text-tertiary transition-colors"
+                      >
+                        <FaEnvelope />
+                      </button>
                       <label
                         className={`absolute left-6 text-gray-500 duration-200 transition-all ${
                           newJudge.email
@@ -623,18 +647,29 @@ const AdminUsers = () => {
 
                     <div className="mb-6 relative">
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         name="password"
                         value={newJudge.password}
                         onChange={handleJudgeInputChange}
                         onFocus={() => setIsPasswordFocused(true)}
                         onBlur={() => setIsPasswordFocused(false)}
-                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                        className={`peer w-full border border-gray-300 rounded-lg pl-7 pr-12 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                           judgeErrors.password
                             ? "border-red-500 focus:ring-red-500"
                             : "border-gray-300 focus:ring-tertiary"
                         }`}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-4 top-4 text-gray-400 hover:text-tertiary transition-colors"
+                      >
+                        {showPassword ? (
+                          <FaEyeSlash className="w-4 h-4" />
+                        ) : (
+                          <FaEye className="w-4 h-4" />
+                        )}
+                      </button>
                       <label
                         className={`absolute left-6 text-gray-500 duration-200 transition-all ${
                           newJudge.password
@@ -662,16 +697,27 @@ const AdminUsers = () => {
 
                     <div className="mb-6 relative">
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         name="confirmPassword"
                         value={newJudge.confirmPassword}
                         onChange={handleJudgeInputChange}
-                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                        className={`peer w-full border border-gray-300 rounded-lg pl-7 pr-12 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
                           judgeErrors.confirmPassword
                             ? "border-red-500 focus:ring-red-500"
                             : "border-gray-300 focus:ring-tertiary"
                         }`}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-4 top-4 text-gray-400 hover:text-tertiary transition-colors"
+                      >
+                        {showPassword ? (
+                          <FaEyeSlash className="w-4 h-4" />
+                        ) : (
+                          <FaEye className="w-4 h-4" />
+                        )}
+                      </button>
                       <label
                         className={`absolute left-6 text-gray-500 duration-200 transition-all ${
                           newJudge.confirmPassword
@@ -726,6 +772,14 @@ const AdminUsers = () => {
 
 // User Details Modal Component
 const UserDetailsModal = ({ user, onClose }) => {
+  const [userStats, setUserStats] = useState({
+    cases: { total: 0, open: 0, inProgress: 0, closed: 0 },
+    hearings: { total: 0, upcoming: 0, completed: 0 },
+    loading: true,
+  });
+  const [activityHistory, setActivityHistory] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const formatDate = (dateString) => {
     const options = {
       year: "numeric",
@@ -736,6 +790,166 @@ const UserDetailsModal = ({ user, onClose }) => {
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
+
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000)
+      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return formatDate(dateString);
+  };
+
+  // Fetch user statistics and activity
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        setStatsLoading(true);
+
+        // Fetch all cases and hearings
+        const [casesResponse, hearingsResponse] = await Promise.all([
+          casesAPI.getCases(),
+          hearingsAPI.getHearings().catch(() => ({ data: [] })), // Handle if user can't access hearings
+        ]);
+
+        const allCases = casesResponse.data;
+        const allHearings = hearingsResponse.data;
+
+        // Filter cases based on user role
+        let userCases = [];
+        if (user.role === "Client") {
+          userCases = allCases.filter(
+            (c) => c.client?._id === user.id || c.client?.id === user.id
+          );
+        } else if (user.role === "Judge") {
+          userCases = allCases.filter(
+            (c) => c.judge?._id === user.id || c.judge?.id === user.id
+          );
+        } else {
+          // Admin can see all cases for overview
+          userCases = allCases;
+        }
+
+        // Calculate case statistics
+        const caseStats = {
+          total: userCases.length,
+          open: userCases.filter((c) => c.status === "Open").length,
+          inProgress: userCases.filter((c) => c.status === "In Progress")
+            .length,
+          closed: userCases.filter((c) => c.status === "Closed").length,
+        };
+
+        // Filter hearings based on user role
+        let userHearings = [];
+        if (user.role === "Judge") {
+          userHearings = allHearings.filter(
+            (h) => h.judge?._id === user.id || h.judge?.id === user.id
+          );
+        } else if (user.role === "Client") {
+          // Get hearings for user's cases
+          const userCaseIds = userCases.map((c) => c._id || c.id);
+          userHearings = allHearings.filter((h) =>
+            userCaseIds.includes(h.case?._id || h.case?.id)
+          );
+        } else {
+          // Admin can see all hearings for overview
+          userHearings = allHearings;
+        }
+
+        // Calculate hearing statistics
+        const now = new Date();
+        const hearingStats = {
+          total: userHearings.length,
+          upcoming: userHearings.filter((h) => h.date && new Date(h.date) > now)
+            .length,
+          completed: userHearings.filter(
+            (h) => h.date && new Date(h.date) <= now
+          ).length,
+        };
+
+        // Generate activity history
+        const activities = [];
+
+        // Add case activities
+        userCases.slice(0, 5).forEach((caseItem) => {
+          activities.push({
+            id: `case-${caseItem._id}`,
+            type: "case",
+            action:
+              user.role === "Client"
+                ? "Filed case"
+                : user.role === "Judge"
+                ? "Assigned to case"
+                : "Case created",
+            description: `${caseItem.title}`,
+            date: caseItem.createdAt,
+            status: caseItem.status,
+            icon: FaFileAlt,
+            color:
+              caseItem.status === "Open"
+                ? "text-green-600"
+                : caseItem.status === "In Progress"
+                ? "text-yellow-600"
+                : "text-gray-600",
+          });
+        });
+
+        // Add hearing activities
+        userHearings.slice(0, 3).forEach((hearing) => {
+          const isUpcoming = hearing.date && new Date(hearing.date) > now;
+          activities.push({
+            id: `hearing-${hearing._id}`,
+            type: "hearing",
+            action: isUpcoming ? "Upcoming hearing" : "Hearing completed",
+            description: `${hearing.case?.title || "Case hearing"}`,
+            date: hearing.date || hearing.createdAt,
+            status: isUpcoming ? "Scheduled" : "Completed",
+            icon: FaCalendarAlt,
+            color: isUpcoming ? "text-blue-600" : "text-gray-600",
+          });
+        });
+
+        // Add account creation activity
+        activities.push({
+          id: "account-created",
+          type: "account",
+          action: "Account created",
+          description: `Joined as ${user.role}`,
+          date: user.joinDate,
+          status: "Completed",
+          icon: FaUser,
+          color: "text-green-600",
+        });
+
+        // Sort activities by date (most recent first)
+        activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        setUserStats({
+          cases: caseStats,
+          hearings: hearingStats,
+          loading: false,
+        });
+        setActivityHistory(activities.slice(0, 10)); // Show last 10 activities
+      } catch (error) {
+        console.error("Error fetching user stats:", error);
+        setUserStats({
+          cases: { total: 0, open: 0, inProgress: 0, closed: 0 },
+          hearings: { total: 0, upcoming: 0, completed: 0 },
+          loading: false,
+        });
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchUserStats();
+  }, [user.id, user.role, user.joinDate]);
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
@@ -891,15 +1105,34 @@ const UserDetailsModal = ({ user, onClose }) => {
           {/* Role-specific Information */}
           {user.role === "Judge" && (
             <div className="mb-6 p-4 bg-purple-50 rounded-lg">
-              <h5 className="text-lg font-medium text-purple-900 mb-3">
+              <h5 className="text-lg font-medium text-purple-900 mb-3 flex items-center">
+                <FaGavel className="mr-2" />
                 Judge Information
               </h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-purple-700">
                     Assigned Cases
                   </label>
-                  <p className="mt-1 text-sm text-purple-900">Loading...</p>
+                  <p className="mt-1 text-lg font-semibold text-purple-900">
+                    {statsLoading ? "Loading..." : userStats.cases.total}
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    {!statsLoading &&
+                      `${userStats.cases.open} open, ${userStats.cases.inProgress} in progress`}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-purple-700">
+                    Scheduled Hearings
+                  </label>
+                  <p className="mt-1 text-lg font-semibold text-purple-900">
+                    {statsLoading ? "Loading..." : userStats.hearings.upcoming}
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    {!statsLoading &&
+                      `${userStats.hearings.total} total hearings`}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-purple-700">
@@ -913,21 +1146,42 @@ const UserDetailsModal = ({ user, onClose }) => {
 
           {user.role === "Client" && (
             <div className="mb-6 p-4 bg-green-50 rounded-lg">
-              <h5 className="text-lg font-medium text-green-900 mb-3">
+              <h5 className="text-lg font-medium text-green-900 mb-3 flex items-center">
+                <FaUser className="mr-2" />
                 Client Information
               </h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-green-700">
                     Filed Cases
                   </label>
-                  <p className="mt-1 text-sm text-green-900">Loading...</p>
+                  <p className="mt-1 text-lg font-semibold text-green-900">
+                    {statsLoading ? "Loading..." : userStats.cases.total}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    {!statsLoading &&
+                      `${userStats.cases.open} open, ${userStats.cases.closed} closed`}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-green-700">
-                    Case Status
+                    Upcoming Hearings
                   </label>
-                  <p className="mt-1 text-sm text-green-900">Active</p>
+                  <p className="mt-1 text-lg font-semibold text-green-900">
+                    {statsLoading ? "Loading..." : userStats.hearings.upcoming}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    {!statsLoading &&
+                      `${userStats.hearings.total} total hearings`}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-green-700">
+                    Account Status
+                  </label>
+                  <span className="mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Active
+                  </span>
                 </div>
               </div>
             </div>
@@ -935,10 +1189,34 @@ const UserDetailsModal = ({ user, onClose }) => {
 
           {user.role === "Admin" && (
             <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <h5 className="text-lg font-medium text-blue-900 mb-3">
-                Administrator Information
+              <h5 className="text-lg font-medium text-blue-900 mb-3 flex items-center">
+                <FaChartBar className="mr-2" />
+                Administrator Overview
               </h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-blue-700">
+                    Total Cases (System)
+                  </label>
+                  <p className="mt-1 text-lg font-semibold text-blue-900">
+                    {statsLoading ? "Loading..." : userStats.cases.total}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {!statsLoading &&
+                      `${userStats.cases.open} open, ${userStats.cases.inProgress} in progress`}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-blue-700">
+                    Total Hearings (System)
+                  </label>
+                  <p className="mt-1 text-lg font-semibold text-blue-900">
+                    {statsLoading ? "Loading..." : userStats.hearings.total}
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    {!statsLoading && `${userStats.hearings.upcoming} upcoming`}
+                  </p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700">
                     Admin Level
@@ -946,16 +1224,89 @@ const UserDetailsModal = ({ user, onClose }) => {
                   <p className="mt-1 text-sm text-blue-900">
                     System Administrator
                   </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-blue-700">
-                    Permissions
-                  </label>
-                  <p className="mt-1 text-sm text-blue-900">Full Access</p>
+                  <span className="mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Full Access
+                  </span>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Activity History */}
+          <div className="mb-6">
+            <h5 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <FaHistory className="mr-2 text-gray-600" />
+              Recent Activity
+            </h5>
+            {statsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                <span className="ml-3 text-gray-500">Loading activity...</span>
+              </div>
+            ) : activityHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FaClock className="mx-auto w-12 h-12 text-gray-300 mb-3" />
+                <p>No recent activity found</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {activityHistory.map((activity) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <div
+                      key={activity.id}
+                      className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <div
+                        className={`flex-shrink-0 w-8 h-8 rounded-full bg-white flex items-center justify-center ${activity.color}`}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-gray-900">
+                            {activity.action}
+                          </p>
+                          <span className="text-xs text-gray-500">
+                            {formatRelativeTime(activity.date)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 truncate">
+                          {activity.description}
+                        </p>
+                        <div className="flex items-center mt-1">
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              activity.status === "Open" ||
+                              activity.status === "Scheduled"
+                                ? "bg-green-100 text-green-800"
+                                : activity.status === "In Progress"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : activity.status === "Completed" ||
+                                  activity.status === "Closed"
+                                ? "bg-gray-100 text-gray-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {activity.status === "Open" && (
+                              <FaCheckCircle className="w-3 h-3 mr-1" />
+                            )}
+                            {activity.status === "In Progress" && (
+                              <FaExclamationCircle className="w-3 h-3 mr-1" />
+                            )}
+                            {activity.status === "Scheduled" && (
+                              <FaCalendarAlt className="w-3 h-3 mr-1" />
+                            )}
+                            {activity.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-4 border-t">

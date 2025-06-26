@@ -37,17 +37,24 @@ const Toast = ({
   };
 
   const getToastStyles = () => {
-    const baseStyles =
-      "fixed z-50 max-w-sm w-full shadow-lg rounded-lg pointer-events-auto transition-all duration-300 transform";
+    // When position is "relative", the toast is inside a ToastContainer
+    // When position is anything else, it's a standalone toast
+    const isInContainer = position === "relative";
 
-    const positionStyles = {
-      "top-right": "top-4 right-4",
-      "top-left": "top-4 left-4",
-      "bottom-right": "bottom-4 right-4",
-      "bottom-left": "bottom-4 left-4",
-      "top-center": "top-4 left-1/2 transform -translate-x-1/2",
-      "bottom-center": "bottom-4 left-1/2 transform -translate-x-1/2",
-    };
+    const baseStyles = isInContainer
+      ? "relative z-10 max-w-2xl w-full shadow-lg rounded-lg pointer-events-auto transition-all duration-300 transform"
+      : "fixed z-[60] max-w-2xl w-full shadow-lg rounded-lg pointer-events-auto transition-all duration-300 transform";
+
+    const positionStyles = isInContainer
+      ? ""
+      : {
+          "top-right": "top-4 right-4",
+          "top-left": "top-4 left-4",
+          "bottom-right": "bottom-4 right-4",
+          "bottom-left": "bottom-4 left-4",
+          "top-center": "top-4 left-1/2 transform -translate-x-1/2",
+          "bottom-center": "bottom-4 left-1/2 transform -translate-x-1/2",
+        }[position] || "";
 
     const typeStyles = {
       success: "bg-green-50 border border-green-200",
@@ -60,7 +67,7 @@ const Toast = ({
       ? "opacity-100 translate-y-0 scale-100"
       : "opacity-0 translate-y-2 scale-95";
 
-    return `${baseStyles} ${positionStyles[position]} ${typeStyles[type]} ${animationStyles}`;
+    return `${baseStyles} ${positionStyles} ${typeStyles[type]} ${animationStyles}`.trim();
   };
 
   const getIcon = () => {
@@ -106,7 +113,7 @@ const Toast = ({
       <div className="p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">{getIcon()}</div>
-          <div className="ml-3 w-0 flex-1">
+          <div className="ml-3 w-full flex-1">
             <p className={`text-sm font-medium ${getTextColor()}`}>{message}</p>
           </div>
           <div className="ml-4 flex-shrink-0 flex">

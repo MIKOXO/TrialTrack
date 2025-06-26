@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useRef } from "react";
-import { casesAPI, authAPI } from "../../services/api";
+import { casesAPI, authAPI, documentsAPI } from "../../services/api";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import AdminLayout from "../../components/AdminLayout";
@@ -13,6 +13,24 @@ import {
   FaUserPlus,
   FaEdit,
   FaCalendarAlt,
+  FaUser,
+  FaGavel,
+  FaFileAlt,
+  FaMapMarkerAlt,
+  FaClock,
+  FaExclamationTriangle,
+  FaPhone,
+  FaEnvelope,
+  FaTimes,
+  FaFolder,
+  FaFolderOpen,
+  FaDownload,
+  FaEye,
+  FaUpload,
+  FaTrash,
+  FaFilePdf,
+  FaFileImage,
+  FaFileWord,
 } from "react-icons/fa";
 
 const AdminCases = () => {
@@ -35,6 +53,17 @@ const AdminCases = () => {
   const [assignLoading, setAssignLoading] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState(null);
 
+  // Case Details Modal state
+  const [showCaseDetailsModal, setShowCaseDetailsModal] = useState(false);
+  const [selectedCaseDetails, setSelectedCaseDetails] = useState(null);
+
+  // Documents Modal state
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [selectedCaseForDocs, setSelectedCaseForDocs] = useState(null);
+  const [caseDocuments, setCaseDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+
   // Judges data from backend
   const [judges, setJudges] = useState([]);
 
@@ -42,14 +71,36 @@ const AdminCases = () => {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Open":
-        return "bg-blue-100 text-blue-800";
+        return "bg-green-100 text-green-800";
       case "In Progress":
         return "bg-yellow-100 text-yellow-800";
       case "Closed":
-        return "bg-green-100 text-green-800";
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  // Helper function to get file icon based on mime type
+  const getFileIcon = (mimeType) => {
+    if (mimeType.includes("pdf")) {
+      return <FaFilePdf className="text-red-500" />;
+    } else if (mimeType.includes("image")) {
+      return <FaFileImage className="text-green-500" />;
+    } else if (mimeType.includes("word") || mimeType.includes("document")) {
+      return <FaFileWord className="text-blue-500" />;
+    } else {
+      return <FaFileAlt className="text-gray-500" />;
+    }
+  };
+
+  // Helper function to format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const toggleActionMenu = (caseId, event) => {
@@ -66,6 +117,132 @@ const AdminCases = () => {
     }
   };
 
+  // Case Details Modal functions
+  const openCaseDetailsModal = (caseItem) => {
+    setSelectedCaseDetails(caseItem);
+    setShowCaseDetailsModal(true);
+    setActionMenuOpen(null);
+  };
+
+  const closeCaseDetailsModal = () => {
+    setShowCaseDetailsModal(false);
+    setSelectedCaseDetails(null);
+  };
+
+  // Documents Modal functions
+  const openDocumentsModal = async (caseItem) => {
+    setSelectedCaseForDocs(caseItem);
+    setShowDocumentsModal(true);
+    setActionMenuOpen(null);
+
+    // Fetch documents for this case
+    try {
+      setDocumentsLoading(true);
+      const response = await documentsAPI.getCaseDocuments(caseItem.id);
+      setCaseDocuments(response.data);
+    } catch (error) {
+      console.error("Error fetching case documents:", error);
+      showError("Failed to load documents. Please try again.");
+      setCaseDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const closeDocumentsModal = () => {
+    setShowDocumentsModal(false);
+    setSelectedCaseForDocs(null);
+    setCaseDocuments([]);
+  };
+
+  // Handle document download
+  const handleDownloadDocument = async (document) => {
+    try {
+      const response = await documentsAPI.downloadDocument(
+        selectedCaseForDocs.id,
+        document.name
+      );
+
+      // Create blob and download
+      const blob = new Blob([response.data], { type: document.mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = document.originalName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      showSuccess(`Downloaded ${document.originalName}`);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      showError("Failed to download document. Please try again.");
+    }
+  };
+
+  // Handle document view
+  const handleViewDocument = async (document) => {
+    try {
+      const response = await documentsAPI.viewDocument(
+        selectedCaseForDocs.id,
+        document.name
+      );
+
+      // Create blob URL and open in new tab
+      const blob = new Blob([response.data], { type: document.mimeType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      // Clean up the URL after a delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error("Error viewing document:", error);
+      showError("Failed to view document. Please try again.");
+    }
+  };
+
+  // Handle document upload
+  const handleDocumentUpload = async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setUploadLoading(true);
+      const formData = new FormData();
+
+      for (let i = 0; i < files.length; i++) {
+        formData.append("documents", files[i]);
+      }
+
+      await documentsAPI.uploadDocuments(selectedCaseForDocs.id, formData);
+
+      // Refresh documents list
+      const response = await documentsAPI.getCaseDocuments(
+        selectedCaseForDocs.id
+      );
+      setCaseDocuments(response.data);
+
+      // Update document count in cases list
+      const updatedCases = cases.map((c) =>
+        c.id === selectedCaseForDocs.id
+          ? { ...c, documentCount: response.data.length }
+          : c
+      );
+      setCases(updatedCases);
+
+      showSuccess(`Successfully uploaded ${files.length} document(s)`);
+
+      // Reset file input
+      event.target.value = "";
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      showError("Failed to upload documents. Please try again.");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   // Fetch data from backend
   useEffect(() => {
     const fetchData = async () => {
@@ -75,15 +252,53 @@ const AdminCases = () => {
         // Fetch cases
         const casesResponse = await casesAPI.getCases();
         const casesData = casesResponse.data;
+        console.log("Raw cases data from backend:", casesData);
+
+        // Fetch document counts for each case
+        const casesWithDocCounts = await Promise.all(
+          casesData.map(async (caseItem) => {
+            let documentCount = 0;
+            try {
+              const docsResponse = await documentsAPI.getCaseDocuments(
+                caseItem._id
+              );
+              documentCount = docsResponse.data.length;
+            } catch (error) {
+              console.warn(
+                `Could not fetch documents for case ${caseItem._id}:`,
+                error
+              );
+            }
+            return { ...caseItem, documentCount };
+          })
+        );
 
         // Transform cases data for display
-        const transformedCases = casesData.map((caseItem) => ({
+        const transformedCases = casesWithDocCounts.map((caseItem) => ({
           id: caseItem._id,
           title: caseItem.title,
+          description: caseItem.description,
           client: caseItem.client?.username || "Unknown Client",
-          type: "General", // Backend doesn't have type field
+          clientData: caseItem.client,
+          type: caseItem.caseType
+            ? caseItem.caseType === "smallClaims"
+              ? "SmallClaims"
+              : caseItem.caseType.charAt(0).toUpperCase() +
+                caseItem.caseType.slice(1)
+            : "General",
           date: new Date(caseItem.createdAt).toLocaleDateString(),
-          status: caseItem.status, // Use status as-is from backend
+          status: caseItem.status,
+          assignedJudge: caseItem.judge?.username || "Not Assigned",
+          judgeData: caseItem.judge,
+          priority: caseItem.priority || "Medium",
+          court: caseItem.court || "Not Assigned",
+          defendant: caseItem.defendant,
+          plaintiff: caseItem.plaintiff,
+          evidence: caseItem.evidence,
+          reportDate: caseItem.reportDate,
+          createdAt: caseItem.createdAt,
+          documentCount: caseItem.documentCount || 0,
+          rawData: caseItem, // Keep full case data for details view
         }));
 
         setCases(transformedCases);
@@ -137,6 +352,15 @@ const AdminCases = () => {
     if (caseItem.status === "Closed") {
       showError(
         "Cannot assign judge to closed case. Only open or in-progress cases can be assigned to judges."
+      );
+      setActionMenuOpen(null);
+      return;
+    }
+
+    // Check if case already has a judge assigned
+    if (caseItem.assignedJudge && caseItem.assignedJudge !== "Not Assigned") {
+      showError(
+        `This case is already assigned to Judge ${caseItem.assignedJudge}. Cases cannot be reassigned to a different judge.`
       );
       setActionMenuOpen(null);
       return;
@@ -309,6 +533,12 @@ const AdminCases = () => {
         if (showStatusModal) {
           closeStatusModal();
         }
+        if (showCaseDetailsModal) {
+          closeCaseDetailsModal();
+        }
+        if (showDocumentsModal) {
+          closeDocumentsModal();
+        }
       }
     };
 
@@ -323,7 +553,13 @@ const AdminCases = () => {
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [showAssignModal, assignLoading, showStatusModal]);
+  }, [
+    showAssignModal,
+    assignLoading,
+    showStatusModal,
+    showCaseDetailsModal,
+    showDocumentsModal,
+  ]);
 
   if (loading) {
     return (
@@ -378,10 +614,9 @@ const AdminCases = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option>All Status</option>
-            <option>Active</option>
-            <option>Pending</option>
+            <option>Open</option>
+            <option>In Progress</option>
             <option>Closed</option>
-            <option>Urgent</option>
           </select>
 
           <select
@@ -394,6 +629,8 @@ const AdminCases = () => {
             <option>Criminal</option>
             <option>Family</option>
             <option>Traffic</option>
+            <option>SmallClaims</option>
+            <option>Other</option>
           </select>
         </div>
 
@@ -430,6 +667,18 @@ const AdminCases = () => {
                   scope="col"
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
+                  Assigned Judge
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Documents
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
                   Status
                 </th>
                 <th
@@ -444,7 +693,7 @@ const AdminCases = () => {
               {currentCases.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="8"
                     className="px-6 py-4 text-center text-gray-500"
                   >
                     No cases found.{" "}
@@ -460,13 +709,46 @@ const AdminCases = () => {
                       {caseItem.id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.title}
+                      <div className="flex items-center space-x-2">
+                        <span>{caseItem.title}</span>
+                        <button
+                          onClick={() => openCaseDetailsModal(caseItem)}
+                          className="text-green-600 hover:text-green-800 text-xs underline"
+                          title="View Details"
+                        >
+                          View
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {caseItem.type}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {caseItem.date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span
+                        className={`${
+                          caseItem.assignedJudge === "Not Assigned"
+                            ? "text-red-500 italic"
+                            : "text-gray-900"
+                        }`}
+                      >
+                        {caseItem.assignedJudge}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => openDocumentsModal(caseItem)}
+                        className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
+                        title="View Documents"
+                      >
+                        <FaFolder className="w-4 h-4" />
+                        <span className="font-medium">
+                          {caseItem.documentCount}
+                        </span>
+                        <span className="text-xs">docs</span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -523,13 +805,21 @@ const AdminCases = () => {
                     const selectedCase = currentCases.find(
                       (c) => c.id === actionMenuOpen
                     );
-                    return selectedCase?.status === "Closed";
+                    return (
+                      selectedCase?.status === "Closed" ||
+                      (selectedCase?.assignedJudge &&
+                        selectedCase?.assignedJudge !== "Not Assigned")
+                    );
                   })()}
                   className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
                     const selectedCase = currentCases.find(
                       (c) => c.id === actionMenuOpen
                     );
-                    return selectedCase?.status === "Closed"
+                    const isDisabled =
+                      selectedCase?.status === "Closed" ||
+                      (selectedCase?.assignedJudge &&
+                        selectedCase?.assignedJudge !== "Not Assigned");
+                    return isDisabled
                       ? "text-gray-400 cursor-not-allowed bg-gray-50"
                       : "text-gray-700 hover:bg-gray-100";
                   })()}`}
@@ -537,9 +827,16 @@ const AdminCases = () => {
                     const selectedCase = currentCases.find(
                       (c) => c.id === actionMenuOpen
                     );
-                    return selectedCase?.status === "Closed"
-                      ? "Cannot assign judge to closed case"
-                      : "Assign a judge to this case";
+                    if (selectedCase?.status === "Closed") {
+                      return "Cannot assign judge to closed case";
+                    }
+                    if (
+                      selectedCase?.assignedJudge &&
+                      selectedCase?.assignedJudge !== "Not Assigned"
+                    ) {
+                      return `Case already assigned to ${selectedCase.assignedJudge}`;
+                    }
+                    return "Assign a judge to this case";
                   })()}
                 >
                   <FaUserPlus
@@ -547,9 +844,11 @@ const AdminCases = () => {
                       const selectedCase = currentCases.find(
                         (c) => c.id === actionMenuOpen
                       );
-                      return selectedCase?.status === "Closed"
-                        ? "text-gray-400"
-                        : "text-green-600";
+                      const isDisabled =
+                        selectedCase?.status === "Closed" ||
+                        (selectedCase?.assignedJudge &&
+                          selectedCase?.assignedJudge !== "Not Assigned");
+                      return isDisabled ? "text-gray-400" : "text-green-600";
                     })()}`}
                   />
                   Assign to Judge
@@ -557,11 +856,24 @@ const AdminCases = () => {
                     const selectedCase = currentCases.find(
                       (c) => c.id === actionMenuOpen
                     );
-                    return selectedCase?.status === "Closed" ? (
-                      <span className="ml-2 text-xs text-gray-400">
-                        (Case Closed)
-                      </span>
-                    ) : null;
+                    if (selectedCase?.status === "Closed") {
+                      return (
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Case Closed)
+                        </span>
+                      );
+                    }
+                    if (
+                      selectedCase?.assignedJudge &&
+                      selectedCase?.assignedJudge !== "Not Assigned"
+                    ) {
+                      return (
+                        <span className="ml-2 text-xs text-gray-400">
+                          (Already Assigned)
+                        </span>
+                      );
+                    }
+                    return null;
                   })()}
                 </button>
                 <button
@@ -602,7 +914,7 @@ const AdminCases = () => {
                       );
                       return selectedCase?.status === "Closed"
                         ? "text-gray-400"
-                        : "text-blue-600";
+                        : "text-green-600";
                     })()}`}
                   />
                   Change Status
@@ -833,13 +1145,529 @@ const AdminCases = () => {
           </div>
         )}
 
-        {/* Toast Container */}
-        <ToastContainer
-          toasts={toasts}
-          onRemoveToast={removeToast}
-          position="top-right"
-        />
+        {/* Case Details Modal */}
+        {showCaseDetailsModal && selectedCaseDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900">
+                    Case Details
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Case ID: {selectedCaseDetails.id}
+                  </p>
+                </div>
+                <button
+                  onClick={closeCaseDetailsModal}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                  title="Close"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 space-y-6">
+                {/* Basic Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <FaFileAlt className="mr-2 text-green-600" />
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Title
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedCaseDetails.title}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Type
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedCaseDetails.type}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Status
+                      </label>
+                      <span
+                        className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(
+                          selectedCaseDetails.status
+                        )}`}
+                      >
+                        {selectedCaseDetails.status}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Priority
+                      </label>
+                      <span
+                        className={`mt-1 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          selectedCaseDetails.priority === "Urgent"
+                            ? "bg-red-100 text-red-800"
+                            : selectedCaseDetails.priority === "High"
+                            ? "bg-orange-100 text-orange-800"
+                            : selectedCaseDetails.priority === "Medium"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {selectedCaseDetails.priority}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Created Date
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedCaseDetails.date}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Court
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedCaseDetails.court}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
+                    <p className="mt-1 text-sm text-gray-900 bg-white p-3 rounded border">
+                      {selectedCaseDetails.description ||
+                        "No description provided"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Parties Involved */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <FaUser className="mr-2 text-green-600" />
+                    Parties Involved
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Client Information */}
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-medium text-gray-900 mb-3">Client</h4>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500">
+                            Name
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {selectedCaseDetails.client}
+                          </p>
+                        </div>
+                        {selectedCaseDetails.clientData?.email && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaEnvelope className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.clientData.email}
+                          </div>
+                        )}
+                        {selectedCaseDetails.clientData?.phone && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaPhone className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.clientData.phone}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Defendant Information */}
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        Defendant
+                      </h4>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500">
+                            Name
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {selectedCaseDetails.defendant?.name ||
+                              "Not specified"}
+                          </p>
+                        </div>
+                        {selectedCaseDetails.defendant?.email && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaEnvelope className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.defendant.email}
+                          </div>
+                        )}
+                        {selectedCaseDetails.defendant?.phone && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaPhone className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.defendant.phone}
+                          </div>
+                        )}
+                        {selectedCaseDetails.defendant?.address && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaMapMarkerAlt className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.defendant.address}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Plaintiff Information (if exists) */}
+                  {selectedCaseDetails.plaintiff?.name && (
+                    <div className="mt-4 bg-white p-4 rounded border">
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        Plaintiff
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500">
+                            Name
+                          </label>
+                          <p className="text-sm text-gray-900">
+                            {selectedCaseDetails.plaintiff.name}
+                          </p>
+                        </div>
+                        {selectedCaseDetails.plaintiff.email && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaEnvelope className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.plaintiff.email}
+                          </div>
+                        )}
+                        {selectedCaseDetails.plaintiff.phone && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaPhone className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.plaintiff.phone}
+                          </div>
+                        )}
+                        {selectedCaseDetails.plaintiff.address && (
+                          <div className="flex items-center text-sm text-gray-600">
+                            <FaMapMarkerAlt className="mr-2 w-3 h-3" />
+                            {selectedCaseDetails.plaintiff.address}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Assignment Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <FaGavel className="mr-2 text-purple-600" />
+                    Assignment Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Assigned Judge
+                      </label>
+                      <div className="mt-1 flex items-center space-x-2">
+                        <p
+                          className={`text-sm ${
+                            selectedCaseDetails.assignedJudge === "Not Assigned"
+                              ? "text-red-500 italic"
+                              : "text-gray-900 font-medium"
+                          }`}
+                        >
+                          {selectedCaseDetails.assignedJudge}
+                        </p>
+                        {selectedCaseDetails.assignedJudge &&
+                          selectedCaseDetails.assignedJudge !==
+                            "Not Assigned" && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <FaGavel className="mr-1 w-3 h-3" />
+                              Assigned
+                            </span>
+                          )}
+                      </div>
+                      {selectedCaseDetails.assignedJudge &&
+                        selectedCaseDetails.assignedJudge !==
+                          "Not Assigned" && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            This case cannot be reassigned to another judge
+                          </p>
+                        )}
+                    </div>
+                    {selectedCaseDetails.judgeData?.email && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <FaEnvelope className="mr-2 w-3 h-3" />
+                        {selectedCaseDetails.judgeData.email}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Evidence */}
+                {selectedCaseDetails.evidence && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FaExclamationTriangle className="mr-2 text-yellow-600" />
+                      Evidence
+                    </h3>
+                    <div className="bg-white p-3 rounded border">
+                      <p className="text-sm text-gray-900">
+                        {selectedCaseDetails.evidence}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Report Date */}
+                {selectedCaseDetails.reportDate && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <FaClock className="mr-2 text-green-600" />
+                      Report Date
+                    </h3>
+                    <p className="text-sm text-gray-900">
+                      {new Date(
+                        selectedCaseDetails.reportDate
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+                <button
+                  onClick={closeCaseDetailsModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    closeCaseDetailsModal();
+                    openAssignModal(selectedCaseDetails);
+                  }}
+                  disabled={
+                    selectedCaseDetails.status === "Closed" ||
+                    (selectedCaseDetails.assignedJudge &&
+                      selectedCaseDetails.assignedJudge !== "Not Assigned")
+                  }
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    selectedCaseDetails.status === "Closed" ||
+                    (selectedCaseDetails.assignedJudge &&
+                      selectedCaseDetails.assignedJudge !== "Not Assigned")
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                  title={
+                    selectedCaseDetails.status === "Closed"
+                      ? "Cannot assign judge to closed case"
+                      : selectedCaseDetails.assignedJudge &&
+                        selectedCaseDetails.assignedJudge !== "Not Assigned"
+                      ? `Case already assigned to ${selectedCaseDetails.assignedJudge}`
+                      : "Assign a judge to this case"
+                  }
+                >
+                  {selectedCaseDetails.assignedJudge &&
+                  selectedCaseDetails.assignedJudge !== "Not Assigned"
+                    ? "Already Assigned"
+                    : "Assign Judge"}
+                </button>
+                <button
+                  onClick={() => {
+                    closeCaseDetailsModal();
+                    openStatusModal(selectedCaseDetails);
+                  }}
+                  disabled={selectedCaseDetails.status === "Closed"}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    selectedCaseDetails.status === "Closed"
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 text-white hover:bg-green-700"
+                  }`}
+                >
+                  Change Status
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Documents Modal */}
+        {showDocumentsModal && selectedCaseForDocs && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-xl">
+              {/* Modal Header */}
+              <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                    <FaFolderOpen className="mr-3 text-green-600" />
+                    Case Documents
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedCaseForDocs.title} - {caseDocuments.length}{" "}
+                    document(s)
+                  </p>
+                </div>
+                <button
+                  onClick={closeDocumentsModal}
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                  title="Close"
+                >
+                  <FaTimes className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Upload Section */}
+              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Upload Documents
+                  </h3>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="file"
+                      multiple
+                      onChange={handleDocumentUpload}
+                      className="hidden"
+                      id="document-upload"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                      disabled={uploadLoading}
+                    />
+                    <label
+                      htmlFor="document-upload"
+                      className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                        uploadLoading
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-green-600 text-white hover:bg-green-700"
+                      }`}
+                    >
+                      <FaUpload className="mr-2 w-4 h-4" />
+                      {uploadLoading ? "Uploading..." : "Upload Files"}
+                    </label>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Supported formats: PDF, DOC, DOCX, JPG, JPEG, PNG, TXT
+                </p>
+              </div>
+
+              {/* Documents List */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {documentsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                      <p className="text-gray-500 mt-4">Loading documents...</p>
+                    </div>
+                  </div>
+                ) : caseDocuments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FaFolder className="mx-auto w-16 h-16 text-gray-300 mb-4" />
+                    <p className="text-gray-500 font-medium">
+                      No documents found
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Upload documents using the button above
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {caseDocuments.map((document) => (
+                      <div
+                        key={document._id}
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {getFileIcon(document.mimeType)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-gray-900 truncate">
+                                {document.originalName}
+                              </h4>
+                              <p className="text-xs text-gray-500">
+                                {document.type || "Document"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-xs text-gray-500">
+                          <div className="flex justify-between">
+                            <span>Size:</span>
+                            <span>{formatFileSize(document.size)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Uploaded:</span>
+                            <span>
+                              {new Date(
+                                document.uploadDate
+                              ).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>By:</span>
+                            <span>
+                              {document.uploadedBy?.username || "Unknown"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {document.description && (
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-600">
+                              {document.description}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="mt-4 flex space-x-2">
+                          <button
+                            onClick={() => handleViewDocument(document)}
+                            className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
+                          >
+                            <FaEye className="mr-1 w-3 h-3" />
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleDownloadDocument(document)}
+                            className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
+                          >
+                            <FaDownload className="mr-1 w-3 h-3" />
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+                <button
+                  onClick={closeDocumentsModal}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </AdminLayout>
+
+      {/* Toast Container */}
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="admin-top-right"
+      />
     </section>
   );
 };

@@ -252,21 +252,30 @@ const updateHearing = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get hearings for logged in judge
+// @desc    Get hearings for logged in judge or all hearings for admin
 // @route   GET api/hearings
 // @access  Private
 const getHearings = asyncHandler(async (req, res) => {
   try {
-    // Verify Judge role
-    if (req.user.role !== "Judge") {
-      return res.status(403).json({ error: "Only judges can view hearings" });
-    }
+    let hearings;
 
-    // Find hearings for this judge
-    const hearings = await Hearing.find({ judge: req.user.id })
-      .populate("case", "title")
-      .populate("court", "name location")
-      .sort({ date: 1 });
+    if (req.user.role === "Judge") {
+      // Find hearings for this judge
+      hearings = await Hearing.find({ judge: req.user.id })
+        .populate("case", "title")
+        .populate("court", "name location")
+        .populate("judge", "username firstName lastName")
+        .sort({ date: 1 });
+    } else if (req.user.role === "Admin") {
+      // Admin can see all hearings
+      hearings = await Hearing.find({})
+        .populate("case", "title")
+        .populate("court", "name location")
+        .populate("judge", "username firstName lastName")
+        .sort({ date: 1 });
+    } else {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     res.json(hearings);
   } catch (err) {

@@ -72,7 +72,10 @@ const JudgeCalendar = () => {
           id: caseItem._id,
           title: caseItem.title,
           caseNumber: caseItem._id.slice(-8).toUpperCase(),
-          type: "General", // Backend doesn't have type field
+          type: caseItem.caseType
+            ? caseItem.caseType.charAt(0).toUpperCase() +
+              caseItem.caseType.slice(1)
+            : "General",
         }));
 
         setAvailableCases(transformedCases);
@@ -104,7 +107,12 @@ const JudgeCalendar = () => {
             new Date(hearing.date) > new Date() ? "Upcoming" : "Completed",
           parties: [], // Backend doesn't store parties separately
           notes: hearing.notes || "",
-          type: "General",
+          type: hearing.case?.caseType
+            ? hearing.case.caseType === "smallClaims"
+              ? "SmallClaims"
+              : hearing.case.caseType.charAt(0).toUpperCase() +
+                hearing.case.caseType.slice(1)
+            : "General",
         }));
 
         setHearings(transformedHearings);
@@ -1004,10 +1012,14 @@ const JudgeCalendar = () => {
             </div>
           </FormLoadingOverlay>
         )}
-
-        {/* Toast Container */}
-        <ToastContainer toasts={toasts} removeToast={removeToast} />
       </JudgeLayout>
+
+      {/* Toast Container */}
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="sidebar-layout-top-right"
+      />
     </section>
   );
 };

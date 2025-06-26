@@ -7,7 +7,7 @@ import LoadingButton from "../../components/LoadingButton";
 import { FormLoadingOverlay } from "../../components/LoadingOverlay";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
-import { courtsAPI } from "../../services/api";
+import { courtsAPI, documentsAPI } from "../../services/api";
 import {
   FaSearch,
   FaEllipsisV,
@@ -16,6 +16,7 @@ import {
   FaEye,
   FaClock,
   FaMapMarkerAlt,
+  FaFolder,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
@@ -42,6 +43,8 @@ const JudgeCases = () => {
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [scheduleHearingLoading, setScheduleHearingLoading] = useState(false);
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [selectedCaseForDocs, setSelectedCaseForDocs] = useState(null);
 
   // Dropdown positioning
   const [dropdownPosition, setDropdownPosition] = useState(null);
@@ -58,14 +61,15 @@ const JudgeCases = () => {
           caseItem.caseNumber
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          caseItem.type.toLowerCase().includes(searchTerm.toLowerCase())
+          caseItem.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          caseItem.client.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply tab filter
     if (activeTab !== "all") {
       if (activeTab === "scheduled") {
-        // Show cases with scheduled hearings
+        // Show cases with upcoming scheduled hearings (past hearings are automatically filtered out)
         filtered = filtered.filter(
           (caseItem) => caseItem.scheduledHearing !== null
         );
@@ -172,16 +176,61 @@ const JudgeCases = () => {
           }
         });
 
+        // Fetch document counts for each case
+        const casesWithDocCounts = await Promise.all(
+          response.data.map(async (caseItem) => {
+            let documentCount = 0;
+            try {
+              const docsResponse = await documentsAPI.getCaseDocuments(
+                caseItem._id
+              );
+              documentCount = docsResponse.data.length;
+            } catch (error) {
+              console.warn(
+                `Could not fetch documents for case ${caseItem._id}:`,
+                error
+              );
+            }
+            return { ...caseItem, documentCount };
+          })
+        );
+
         // Transform backend data to match frontend structure
-        const transformedCases = response.data.map((caseItem) => ({
-          id: caseItem._id,
-          title: caseItem.title,
-          caseNumber: caseItem._id.slice(-8).toUpperCase(),
-          type: "General", // Backend doesn't have type field
-          status: caseItem.status,
-          date: new Date(caseItem.createdAt).toLocaleDateString(),
-          scheduledHearing: hearingsMap[caseItem._id] || null,
-        }));
+        const transformedCases = casesWithDocCounts.map((caseItem) => {
+          const hearing = hearingsMap[caseItem._id];
+          let scheduledHearing = null;
+
+          // Check if hearing is still upcoming (not passed)
+          if (hearing) {
+            const hearingDateTime = new Date(`${hearing.date}T${hearing.time}`);
+            const now = new Date();
+
+            // Only show as scheduled if the hearing is in the future
+            if (hearingDateTime > now) {
+              scheduledHearing = hearing;
+            }
+          }
+
+          return {
+            id: caseItem._id,
+            title: caseItem.title,
+            caseNumber: caseItem._id.slice(-8).toUpperCase(),
+            type: caseItem.caseType
+              ? caseItem.caseType.charAt(0).toUpperCase() +
+                caseItem.caseType.slice(1)
+              : "General",
+            status: caseItem.status,
+            date: new Date(caseItem.createdAt).toLocaleDateString(),
+            client:
+              caseItem.client?.username ||
+              (caseItem.client?.firstName && caseItem.client?.lastName
+                ? `${caseItem.client.firstName} ${caseItem.client.lastName}`
+                : "Unknown Client"),
+            clientData: caseItem.client,
+            documentCount: caseItem.documentCount || 0,
+            scheduledHearing: scheduledHearing,
+          };
+        });
 
         setCases(transformedCases);
         console.log("Judge Cases - Loaded cases:", transformedCases);
@@ -481,6 +530,19 @@ const JudgeCases = () => {
     }
   };
 
+  // Open documents modal
+  const openDocumentsModal = (caseItem) => {
+    setSelectedCaseForDocs(caseItem);
+    setShowDocumentsModal(true);
+    setActionMenuOpen(null);
+  };
+
+  // Close documents modal
+  const closeDocumentsModal = () => {
+    setShowDocumentsModal(false);
+    setSelectedCaseForDocs(null);
+  };
+
   const getStatusClass = (status) => {
     switch (status.toLowerCase()) {
       case "open":
@@ -598,12 +660,12 @@ const JudgeCases = () => {
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <h2 className="text-xl font-medium text-gray-700 mb-2">
               {activeTab === "scheduled"
-                ? "No Scheduled Cases"
+                ? "No Upcoming Scheduled Cases"
                 : "No Cases Found"}
             </h2>
             <p className="text-gray-500 mb-6">
               {activeTab === "scheduled"
-                ? "No cases have hearings scheduled yet. Schedule a hearing for your cases to see them here."
+                ? "No cases have upcoming hearings scheduled. Schedule a hearing for your cases or check if past hearings have been completed."
                 : "No cases match your search criteria."}
             </p>
             <button
@@ -622,9 +684,6 @@ const JudgeCases = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Case ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Title
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -632,6 +691,12 @@ const JudgeCases = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Documents
                   </th>
                   {activeTab === "scheduled" && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -649,15 +714,19 @@ const JudgeCases = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCases.map((caseItem) => (
                   <tr key={caseItem.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.caseNumber}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center">
-                        {caseItem.title}
+                      <div className="flex items-center space-x-2">
+                        <span>{caseItem.title}</span>
+                        <Link
+                          to={`/judge/cases/${caseItem.id}`}
+                          className="text-green-600 hover:text-green-800 text-xs underline"
+                          title="View Details"
+                        >
+                          View
+                        </Link>
                         {caseItem.scheduledHearing && (
                           <span
-                            className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full cursor-help"
+                            className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full cursor-help"
                             title={`Hearing on ${new Date(
                               caseItem.scheduledHearing.date
                             ).toLocaleDateString()} at ${
@@ -674,6 +743,22 @@ const JudgeCases = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {caseItem.date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {caseItem.client}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button
+                        onClick={() => openDocumentsModal(caseItem)}
+                        className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
+                        title="View Documents"
+                      >
+                        <FaFolder className="w-4 h-4" />
+                        <span className="font-medium">
+                          {caseItem.documentCount}
+                        </span>
+                        <span className="text-xs">docs</span>
+                      </button>
                     </td>
                     {activeTab === "scheduled" && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1070,6 +1155,57 @@ const JudgeCases = () => {
               </div>
             </div>
           </FormLoadingOverlay>
+        )}
+
+        {/* Documents Modal */}
+        {showDocumentsModal && selectedCaseForDocs && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">
+                  Documents for Case: {selectedCaseForDocs.title}
+                </h2>
+                <button
+                  onClick={closeDocumentsModal}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="text-gray-600 mb-4">
+                  Client: {selectedCaseForDocs.client} | Total Documents:{" "}
+                  {selectedCaseForDocs.documentCount}
+                </p>
+
+                {selectedCaseForDocs.documentCount === 0 ? (
+                  <div className="text-center py-8">
+                    <FaFolder className="mx-auto text-gray-400 text-4xl mb-4" />
+                    <p className="text-gray-500">
+                      No documents found for this case.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      This case has {selectedCaseForDocs.documentCount}{" "}
+                      document(s). Click "View Case Details" to access and
+                      manage documents.
+                    </p>
+                    <Link
+                      to={`/judge/cases/${selectedCaseForDocs.id}`}
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      onClick={closeDocumentsModal}
+                    >
+                      <FaEye className="mr-2" />
+                      View Case Details
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Toast Container */}

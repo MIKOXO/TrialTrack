@@ -450,8 +450,8 @@ const getCases = asyncHandler(async (req, res) => {
     // Admin can see all cases, so no filter needed
 
     const cases = await Case.find(filter)
-      .populate("client", "username email")
-      .populate("judge", "username email")
+      .populate("client", "username email firstName lastName")
+      .populate("judge", "username email firstName lastName")
       .populate("courtRef", "name location");
 
     res.json(cases);

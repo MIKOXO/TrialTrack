@@ -257,6 +257,11 @@ const ClientSettings = () => {
 
   return (
     <section>
+      <ToastContainer
+        toasts={toasts}
+        onRemoveToast={removeToast}
+        position="sidebar-layout-top-right"
+      />
       <ClientLayout>
         <div className="my-4 mx-7 px-5">
           <h1 className="text-xl font-semibold text-gray-800">Settings</h1>

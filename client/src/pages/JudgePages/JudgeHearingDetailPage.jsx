@@ -74,7 +74,12 @@ const JudgeHearingDetailPage = () => {
             new Date(hearingData.date) > new Date() ? "Upcoming" : "Completed",
           parties: [], // Backend doesn't store parties separately
           notes: hearingData.notes || "",
-          type: "General",
+          type: hearingData.case?.caseType
+            ? hearingData.case.caseType === "smallClaims"
+              ? "SmallClaims"
+              : hearingData.case.caseType.charAt(0).toUpperCase() +
+                hearingData.case.caseType.slice(1)
+            : "General",
           documents: [], // TODO: Add when document system is implemented
           history: [], // TODO: Add when activity history is implemented
         };
