@@ -204,31 +204,12 @@ const JudgeHome = () => {
           0
         );
 
-        // If no data exists, generate some sample data for demonstration
-        if (totalNew === 0 && totalResolved === 0 && cases.length === 0) {
-          const sampleNewCases = [2, 3, 1, 4, 2, 3, 5, 2, 1, 3, 2, 4];
-          const sampleResolvedCases = [1, 2, 2, 3, 1, 2, 4, 3, 2, 2, 1, 3];
-
-          setChartData({
-            newCases: sampleNewCases,
-            resolvedCases: sampleResolvedCases,
-            totalNewCases: sampleNewCases.reduce(
-              (sum, count) => sum + count,
-              0
-            ),
-            totalResolvedCases: sampleResolvedCases.reduce(
-              (sum, count) => sum + count,
-              0
-            ),
-          });
-        } else {
-          setChartData({
-            newCases: monthlyNewCases,
-            resolvedCases: monthlyResolvedCases,
-            totalNewCases: totalNew,
-            totalResolvedCases: totalResolved,
-          });
-        }
+        setChartData({
+          newCases: monthlyNewCases,
+          resolvedCases: monthlyResolvedCases,
+          totalNewCases: totalNew,
+          totalResolvedCases: totalResolved,
+        });
 
         // Fetch hearings
         try {

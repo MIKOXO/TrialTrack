@@ -44,6 +44,19 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // Password management fields for security
+  mustChangePassword: {
+    type: Boolean,
+    default: false,
+  },
+  isFirstLogin: {
+    type: Boolean,
+    default: true,
+  },
+  lastPasswordChange: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 const User = mongoose.model("User", userSchema);

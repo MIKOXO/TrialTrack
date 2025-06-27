@@ -28,6 +28,7 @@ import JudgeHearingDetailPage from "./pages/JudgePages/JudgeHearingDetailPage";
 import JudgeCaseDetailPage from "./pages/JudgePages/JudgeCaseDetailPage";
 import ClientFeedback from "./pages/ClientPages/ClientFeedback";
 import AdminComments from "./pages/AdminPages/AdminComments";
+import ForcePasswordChange from "./pages/ForcePasswordChange";
 
 const App = () => {
   return (
@@ -37,6 +38,10 @@ const App = () => {
         <Route path="/roleselector" element={<RoleSelector />} />
         <Route path="/signin" element={<Signin />} />
         <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/force-password-change"
+          element={<ForcePasswordChange />}
+        />
 
         {/* Admin Routes */}
         <Route element={<ProtectedRoute role="Admin" />}>

@@ -1,5 +1,5 @@
 // /* eslint-disable no-unused-vars */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import {
   EyeIcon,
@@ -30,6 +30,16 @@ const Signup = () => {
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Auto-clear submit errors after 10 seconds
+  useEffect(() => {
+    if (submitError) {
+      const timer = setTimeout(() => {
+        setSubmitError("");
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [submitError]);
+
   // Animation hooks
   const logoVisible = usePageLoadAnimation(100);
   const headingVisible = usePageLoadAnimation(300);
@@ -37,10 +47,24 @@ const Signup = () => {
 
   const validate = () => {
     const errs = {};
-    if (!form.username.trim()) errs.username = "Full name is required.";
-    if (!form.email) errs.email = "Email is required.";
-    else if (!/\S+@\S+\.\S+/.test(form.email))
-      errs.email = "Invalid email format.";
+    // Username validation
+    if (!form.username.trim()) {
+      errs.username = "Full name is required.";
+    } else if (form.username.trim().length < 2) {
+      errs.username = "Full name must be at least 2 characters long.";
+    } else if (form.username.trim().length > 50) {
+      errs.username = "Full name must be less than 50 characters.";
+    }
+
+    // Email validation
+    if (!form.email) {
+      errs.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errs.email =
+        "Please enter a valid email address (e.g., user@example.com).";
+    } else if (form.email.length > 100) {
+      errs.email = "Email address is too long.";
+    }
 
     // Enhanced password validation
     if (!form.password) {
@@ -62,6 +86,10 @@ const Signup = () => {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
+    // Clear submit error when user starts typing
+    if (submitError) {
+      setSubmitError("");
+    }
   };
 
   // Check if all password requirements are met
@@ -91,9 +119,75 @@ const Signup = () => {
 
       navigate("/client/home");
     } catch (err) {
-      const msg =
-        err.response?.data?.error || "Sign up failed. Please try again.";
-      setSubmitError(msg);
+      console.error("Signup error:", err);
+      console.error("Error response:", err.response);
+      console.error("Error data:", err.response?.data);
+
+      // Handle different types of errors with user-friendly messages
+      if (err.response) {
+        const status = err.response.status;
+        const errorData = err.response.data;
+
+        console.log("Status:", status);
+        console.log("Error data:", errorData);
+        console.log("Error message:", errorData.error || errorData.message);
+
+        switch (status) {
+          case 400: {
+            const errorMessage = errorData.error || errorData.message || "";
+            console.log("Checking error message:", errorMessage);
+
+            if (
+              errorMessage.includes("User already exists") ||
+              errorMessage.includes("already exists")
+            ) {
+              console.log("User already exists detected!");
+              setSubmitError(
+                `An account with the email "${form.email}" already exists. Please use a different email address or sign in to your existing account.`
+              );
+            } else if (errorMessage.includes("Password")) {
+              setSubmitError(errorMessage);
+            } else {
+              setSubmitError(
+                errorMessage || "Please check your information and try again."
+              );
+            }
+            break;
+          }
+          case 409:
+            setSubmitError(
+              "An account with this email already exists. Please use a different email or try signing in."
+            );
+            break;
+          case 422:
+            setSubmitError(
+              "Invalid information provided. Please check all fields and try again."
+            );
+            break;
+          case 429:
+            setSubmitError(
+              "Too many signup attempts. Please wait a few minutes before trying again."
+            );
+            break;
+          case 500:
+            setSubmitError(
+              "Server error. Please try again later or contact support if the problem persists."
+            );
+            break;
+          default:
+            setSubmitError(
+              errorData.error || "Sign up failed. Please try again."
+            );
+        }
+      } else if (err.request) {
+        // Network error
+        setSubmitError(
+          "Unable to connect to the server. Please check your internet connection and try again."
+        );
+      } else {
+        // Other error
+        setSubmitError("An unexpected error occurred. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -123,8 +217,40 @@ const Signup = () => {
       </div>
 
       {submitError && (
-        <div className="mb-4 text-red-600 text-center font-medium">
-          {submitError}
+        <div className="mb-6 p-4 mx-auto w-full max-w-lg bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{submitError}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setSubmitError("")}
+              className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
+              aria-label="Dismiss error"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 

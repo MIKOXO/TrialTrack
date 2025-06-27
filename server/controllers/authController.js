@@ -100,6 +100,23 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   if (await bcrypt.compare(password, user.password)) {
+    // Check if user must change password (especially for judges on first login)
+    if (user.mustChangePassword) {
+      const token = generateToken(user);
+      return res.json({
+        token,
+        mustChangePassword: true,
+        user: {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          isFirstLogin: user.isFirstLogin,
+        },
+        message: "Password change required before accessing the system",
+      });
+    }
+
     const token = generateToken(user);
     res.json({
       token,
@@ -214,6 +231,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
       const salt = await bcrypt.genSalt(10);
       updates.password = await bcrypt.hash(req.body.newPassword, salt);
+      updates.lastPasswordChange = new Date();
     }
 
     updates.updatedAt = new Date();
@@ -337,12 +355,14 @@ const createJudge = asyncHandler(async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
-  // Create judge
+  // Create judge with mandatory password change requirement
   const judge = await User.create({
     username,
     email,
     password: hashedPassword,
     role: "Judge",
+    mustChangePassword: true,
+    isFirstLogin: true,
   });
 
   if (judge) {
@@ -359,6 +379,82 @@ const createJudge = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Force password change (for first login)
+// @route   POST api/auth/force-password-change
+// @access  Private
+const forcePasswordChange = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+  const userId = req.user.id;
+
+  if (!newPassword) {
+    res.status(400);
+    throw new Error("New password is required");
+  }
+
+  // Validate new password strength
+  const passwordValidation = validatePasswordStrength(newPassword);
+  if (!passwordValidation.isValid) {
+    res.status(400);
+    throw new Error(formatPasswordErrors(passwordValidation.errors));
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    // Only allow this endpoint for users who must change their password
+    if (!user.mustChangePassword) {
+      res.status(403);
+      throw new Error("Password change not required for this user");
+    }
+
+    // Ensure new password is different from current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      res.status(400);
+      throw new Error(
+        "New password must be different from your current password"
+      );
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update user with new password and clear flags
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        password: hashedPassword,
+        mustChangePassword: false,
+        isFirstLogin: false,
+        lastPasswordChange: new Date(),
+        updatedAt: new Date(),
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({
+      message: "Password changed successfully",
+      user: {
+        _id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        profilePicture: updatedUser.profilePicture,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+      },
+    });
+  } catch (err) {
+    res.status(400);
+    throw new Error(err.message);
+  }
+});
+
 export {
   generateToken,
   registerUser,
@@ -370,4 +466,5 @@ export {
   deleteUserProfile,
   getUsers,
   createJudge,
+  forcePasswordChange,
 };

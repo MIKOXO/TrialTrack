@@ -49,6 +49,8 @@ export const authAPI = {
   deleteProfile: (id) => api.delete(`/auth/delete/${id}`),
   getUsers: () => api.get("/auth/users"),
   createJudge: (judgeData) => api.post("/auth/create-judge", judgeData),
+  forcePasswordChange: (passwordData) =>
+    api.post("/auth/force-password-change", passwordData),
 };
 
 // Cases API

@@ -235,32 +235,6 @@ const JudgeCases = () => {
         setCases(transformedCases);
         console.log("Judge Cases - Loaded cases:", transformedCases);
 
-        // Add test data if no cases are loaded
-        if (transformedCases.length === 0) {
-          const testCases = [
-            {
-              id: "JUDGE001",
-              title: "Judge Test Case 1",
-              caseNumber: "JTC001",
-              type: "Civil",
-              date: "2024-01-15",
-              status: "Open",
-              scheduledHearing: null,
-            },
-            {
-              id: "JUDGE002",
-              title: "Judge Test Case 2",
-              caseNumber: "JTC002",
-              type: "Criminal",
-              date: "2024-01-16",
-              status: "In Progress",
-              scheduledHearing: null,
-            },
-          ];
-          setCases(testCases);
-          console.log("Judge Cases - Using test data:", testCases);
-        }
-
         setLoading(false);
       } catch (err) {
         console.error("Error fetching cases:", err);

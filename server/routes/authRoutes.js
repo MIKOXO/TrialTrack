@@ -9,6 +9,7 @@ import {
   deleteUserProfile,
   getUsers,
   createJudge,
+  forcePasswordChange,
 } from "../controllers/authController.js";
 import { authMiddleware, restrictTo } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -29,5 +30,6 @@ router.post(
 router.delete("/delete/:id", authMiddleware, deleteUserProfile);
 router.get("/users", authMiddleware, restrictTo("Admin"), getUsers);
 router.post("/create-judge", authMiddleware, restrictTo("Admin"), createJudge);
+router.post("/force-password-change", authMiddleware, forcePasswordChange);
 
 export default router;

@@ -26,6 +26,16 @@ const Signin = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Auto-clear server errors after 10 seconds
+  useEffect(() => {
+    if (serverError) {
+      const timer = setTimeout(() => {
+        setServerError("");
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [serverError]);
+
   // Animation hooks
   const logoVisible = usePageLoadAnimation(100);
   const headingVisible = usePageLoadAnimation(300);
@@ -39,8 +49,21 @@ const Signin = () => {
 
   const validate = () => {
     const errs = {};
-    if (!form.email) errs.email = "Email is required.";
-    if (!form.password) errs.password = "Password is required.";
+
+    // Email validation
+    if (!form.email) {
+      errs.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errs.email = "Please enter a valid email address.";
+    }
+
+    // Password validation
+    if (!form.password) {
+      errs.password = "Password is required.";
+    } else if (form.password.length < 6) {
+      errs.password = "Password must be at least 6 characters long.";
+    }
+
     return errs;
   };
 
@@ -76,16 +99,66 @@ const Signin = () => {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
+      // Check if user must change password (especially judges on first login)
+      if (res.data.mustChangePassword) {
+        navigate("/force-password-change");
+        return;
+      }
+
       // Redirect based on role
       if (user.role === "Admin") navigate("/admin/home");
       else if (user.role === "Judge") navigate("/judge/home");
       else if (user.role === "Client") navigate("/client/home");
       else navigate("/");
     } catch (err) {
-      if (err.response && err.response.data) {
-        setServerError(err.response.data.error || "Login failed.");
+      console.error("Login error:", err);
+
+      // Handle different types of errors with user-friendly messages
+      if (err.response) {
+        const status = err.response.status;
+        const errorData = err.response.data;
+
+        switch (status) {
+          case 400:
+            setServerError(
+              errorData.error ||
+                "Invalid login credentials. Please check your email and password."
+            );
+            break;
+          case 403:
+            setServerError(
+              errorData.error ||
+                `Access denied. You are not registered as a ${roleParam}.`
+            );
+            break;
+          case 404:
+            setServerError(
+              "Account not found. Please check your email address or sign up for a new account."
+            );
+            break;
+          case 429:
+            setServerError(
+              "Too many login attempts. Please wait a few minutes before trying again."
+            );
+            break;
+          case 500:
+            setServerError(
+              "Server error. Please try again later or contact support if the problem persists."
+            );
+            break;
+          default:
+            setServerError(
+              errorData.error || "Login failed. Please try again."
+            );
+        }
+      } else if (err.request) {
+        // Network error
+        setServerError(
+          "Unable to connect to the server. Please check your internet connection and try again."
+        );
       } else {
-        setServerError("Server error.");
+        // Other error
+        setServerError("An unexpected error occurred. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -195,7 +268,45 @@ const Signin = () => {
           </div>
 
           {serverError && (
-            <p className="text-red-600 text-sm text-center">{serverError}</p>
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">{serverError}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setServerError("")}
+                  className="flex-shrink-0 ml-4 text-red-400 hover:text-red-600 transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
           )}
 
           <LoadingButton
