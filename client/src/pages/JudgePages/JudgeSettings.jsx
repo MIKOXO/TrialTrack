@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import JudgeLayout from "../../components/JudgeLayout";
+import DeleteAccountModal from "../../components/DeleteAccountModal";
 import ProfileAvatar from "../../components/ProfileAvatar";
 import LoadingButton from "../../components/LoadingButton";
 import {
@@ -19,10 +21,13 @@ import { validatePasswordStrength } from "../../utils/passwordValidation";
 import PasswordRequirements from "../../components/PasswordRequirements";
 
 const JudgeSettings = () => {
+  const navigate = useNavigate();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const fileInputRef = useRef(null);
   const [profilePicture, setProfilePicture] = useState(null);
   const [profileData, setProfileData] = useState({
@@ -257,9 +262,36 @@ const JudgeSettings = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      setDeleteLoading(true);
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+
+      await authAPI.deleteProfile(storedUser._id);
+
+      // Clear localStorage
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      showSuccess("Account deleted successfully");
+
+      // Navigate to home page after a short delay
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      showError(error.response?.data?.message || "Failed to delete account");
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   const tabs = [
     { id: "profile", name: "Profile", icon: <FaUser /> },
     { id: "password", name: "Password", icon: <FaLock /> },
+    { id: "account", name: "Account", icon: <FaCog /> },
   ];
 
   return (
@@ -278,7 +310,7 @@ const JudgeSettings = () => {
         </div>
 
         <div className="my-5 py-3 bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-2 flex border-b mb-6 mx-5 w-[330px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
+          <div className="p-2 flex border-b mb-6 mx-5 w-[475px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
             <nav className="flex">
               {tabs.map((tab) => (
                 <button
@@ -490,9 +522,42 @@ const JudgeSettings = () => {
                 </form>
               </div>
             )}
+
+            {activeTab === "account" && (
+              <div>
+                <h2 className="text-lg font-medium mb-4">Account Management</h2>
+                <div className="space-y-6">
+                  {/* Danger Zone */}
+                  <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                    <h3 className="text-lg font-medium text-red-800 mb-2">
+                      Danger Zone
+                    </h3>
+                    <p className="text-red-700 mb-4">
+                      Once you delete your account, there is no going back.
+                      Please be certain.
+                    </p>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 ease-in-out duration-300 flex items-center"
+                    >
+                      <FaTrash className="mr-2" />
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </JudgeLayout>
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        loading={deleteLoading}
+      />
     </section>
   );
 };
