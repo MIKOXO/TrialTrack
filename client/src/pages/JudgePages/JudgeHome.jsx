@@ -60,7 +60,7 @@ const JudgeHome = () => {
     totalResolvedCases: 0,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Chart data for case statistics - now dynamic

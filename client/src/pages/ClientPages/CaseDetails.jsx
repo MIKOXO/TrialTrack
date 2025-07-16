@@ -115,7 +115,7 @@ const CaseDetails = () => {
   if (error) {
     return (
       <ClientLayout>
-        <div className="px-7 py-4">
+        <div className="px-4 md:px-7 py-4">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -131,9 +131,9 @@ const CaseDetails = () => {
                   />
                 </svg>
               </div>
-              <div className="ml-3">
+              <div className="ml-3 min-w-0">
                 <h3 className="text-sm font-medium">Error Loading Case</h3>
-                <p className="text-sm mt-1">{error}</p>
+                <p className="text-sm mt-1 break-words">{error}</p>
               </div>
             </div>
           </div>
@@ -154,32 +154,34 @@ const CaseDetails = () => {
 
   return (
     <ClientLayout>
-      <div className="px-7 py-4">
+      <div className="px-4 md:px-7 py-4">
         <button
           onClick={() => navigate("/client/mycases")}
-          className="flex items-center text-gray-600 hover:text-gray-800 mb-4"
+          className="flex items-center text-gray-600 hover:text-gray-800 mb-4 text-sm md:text-base"
         >
-          <FaArrowLeft className="mr-2" />
+          <FaArrowLeft className="mr-2 flex-shrink-0" />
           Back to My Cases
         </button>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 break-words">
               {caseData.title}
             </h1>
-            <p className="text-gray-600 mt-1">Case ID: {caseData._id}</p>
+            <p className="text-gray-600 mt-1 text-sm md:text-base break-words">
+              Case ID: {caseData._id}
+            </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
             <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityColor(
+              className={`px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getPriorityColor(
                 caseData.priority
               )}`}
             >
               {caseData.priority} Priority
             </span>
             <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+              className={`px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getStatusColor(
                 caseData.status
               )}`}
             >
@@ -190,11 +192,11 @@ const CaseDetails = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="mx-7 mb-6 w-[390px] bg-tertiary bg-opacity-15 rounded-md shadow-md">
-        <nav className="-mb-px flex space-x-8 p-2">
+      <div className="mx-4 md:mx-7 mb-4 md:mb-6 max-w-full md:w-[390px] bg-tertiary bg-opacity-15 rounded-md shadow-md">
+        <nav className="-mb-px flex p-2">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`flex-1 py-5 px-4 text-center ${
+            className={`flex-1 py-3 md:py-5 px-3 md:px-4 text-center text-sm md:text-base ${
               activeTab === "overview"
                 ? "bg-white rounded-lg text-green-600 font-medium"
                 : " border-transparent text-gray-500"
@@ -204,7 +206,7 @@ const CaseDetails = () => {
           </button>
           <button
             onClick={() => setActiveTab("documents")}
-            className={`flex-1 py-5 px-4 text-center ${
+            className={`flex-1 py-3 md:py-5 px-3 md:px-4 text-center text-sm md:text-base ${
               activeTab === "documents"
                 ? "bg-white rounded-lg text-green-600 font-medium"
                 : " border-transparent text-gray-500"
@@ -217,89 +219,97 @@ const CaseDetails = () => {
 
       {/* Tab Content */}
       {activeTab === "overview" && (
-        <div className="px-7 py-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="px-4 md:px-7 py-4 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Case Information */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">
               Case Information
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">
+                <label className="text-xs md:text-sm font-medium text-gray-500">
                   Case Type
                 </label>
-                <p className="text-gray-900 capitalize">{caseData.caseType}</p>
+                <p className="text-gray-900 capitalize text-sm md:text-base break-words">
+                  {caseData.caseType}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
+                <label className="text-xs md:text-sm font-medium text-gray-500">
                   Court
                 </label>
-                <p className="text-gray-900 capitalize">{caseData.court}</p>
+                <p className="text-gray-900 capitalize text-sm md:text-base break-words">
+                  {caseData.court}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
+                <label className="text-xs md:text-sm font-medium text-gray-500">
                   Report Date
                 </label>
-                <p className="text-gray-900">
+                <p className="text-gray-900 text-sm md:text-base">
                   {formatDate(caseData.reportDate)}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
+                <label className="text-xs md:text-sm font-medium text-gray-500">
                   Filed Date
                 </label>
-                <p className="text-gray-900">
+                <p className="text-gray-900 text-sm md:text-base">
                   {formatDate(caseData.createdAt)}
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">
+                <label className="text-xs md:text-sm font-medium text-gray-500">
                   Description
                 </label>
-                <p className="text-gray-900">{caseData.description}</p>
+                <p className="text-gray-900 text-sm md:text-base break-words">
+                  {caseData.description}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Parties Involved */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">
               Parties Involved
             </h2>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                <h3 className="text-xs md:text-sm font-medium text-gray-500 mb-2">
                   Plaintiff
                 </h3>
                 <div className="space-y-1">
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 text-sm md:text-base break-words">
                     {caseData.plaintiff?.name || "Not specified"}
                   </p>
                   {caseData.plaintiff?.email && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs md:text-sm text-gray-600 break-words">
                       {caseData.plaintiff.email}
                     </p>
                   )}
                   {caseData.plaintiff?.phone && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs md:text-sm text-gray-600">
                       {caseData.plaintiff.phone}
                     </p>
                   )}
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">
+                <h3 className="text-xs md:text-sm font-medium text-gray-500 mb-2">
                   Defendant
                 </h3>
                 <div className="space-y-1">
-                  <p className="text-gray-900">{caseData.defendant?.name}</p>
+                  <p className="text-gray-900 text-sm md:text-base break-words">
+                    {caseData.defendant?.name}
+                  </p>
                   {caseData.defendant?.email && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs md:text-sm text-gray-600 break-words">
                       {caseData.defendant.email}
                     </p>
                   )}
                   {caseData.defendant?.phone && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs md:text-sm text-gray-600">
                       {caseData.defendant.phone}
                     </p>
                   )}
@@ -310,24 +320,24 @@ const CaseDetails = () => {
 
           {/* Legal Details */}
           {caseData.reliefSought && (
-            <div className="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6 lg:col-span-2">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-4">
                 Legal Details
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  <h3 className="text-xs md:text-sm font-medium text-gray-500 mb-2">
                     Relief Sought
                   </h3>
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 text-sm md:text-base break-words">
                     {caseData.reliefSought.detailedRequest}
                   </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                  <h3 className="text-xs md:text-sm font-medium text-gray-500 mb-2">
                     Legal Representation
                   </h3>
-                  <p className="text-gray-900">
+                  <p className="text-gray-900 text-sm md:text-base break-words">
                     {caseData.representation?.hasLawyer
                       ? `Represented by ${caseData.representation.lawyerName}`
                       : "Self-represented"}
@@ -340,22 +350,22 @@ const CaseDetails = () => {
       )}
 
       {activeTab === "documents" && (
-        <div className="space-y-6 px-7 py-4">
+        <div className="space-y-4 md:space-y-6 px-4 md:px-7 py-4">
           {/* Upload Section */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0 mb-4">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">
                 Upload Additional Documents
               </h2>
               <label
-                className={`cursor-pointer bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center ${
+                className={`cursor-pointer bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center text-sm md:text-base ${
                   uploadLoading ? "opacity-75 cursor-not-allowed" : ""
                 }`}
               >
                 {uploadLoading ? (
                   <Spinner size="sm" color="white" className="mr-2" />
                 ) : (
-                  <FaUpload className="mr-2" />
+                  <FaUpload className="mr-2 flex-shrink-0" />
                 )}
                 {uploadLoading ? "Uploading..." : "Upload Files"}
                 <input
@@ -368,7 +378,7 @@ const CaseDetails = () => {
                 />
               </label>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-xs md:text-sm text-gray-600">
               Upload additional evidence, documents, or files related to your
               case. Supported formats: PDF, DOC, DOCX, JPG, PNG, GIF, TXT (Max
               10MB each)
@@ -376,7 +386,7 @@ const CaseDetails = () => {
           </div>
 
           {/* Document Viewer */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
             <DocumentViewer
               caseId={id}
               canDelete={true}

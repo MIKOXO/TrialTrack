@@ -29,7 +29,7 @@ const JudgeCases = () => {
   const [filteredCases, setFilteredCases] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);

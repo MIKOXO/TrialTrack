@@ -13,7 +13,7 @@ const MyCases = () => {
   const [filteredCases, setFilteredCases] = useState([]);
   const [activeTab, setActiveTab] = useState("All Cases");
   const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const tabs = ["All Cases", "Open", "Pending", "Closed"];

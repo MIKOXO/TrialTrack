@@ -39,7 +39,7 @@ const AdminCases = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const dropdownRef = useRef(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");

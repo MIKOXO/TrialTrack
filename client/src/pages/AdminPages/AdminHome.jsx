@@ -117,7 +117,7 @@ const AdminHome = () => {
 
   const [upcomingHearings, setUpcomingHearings] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState({
     monthlyStats: [],

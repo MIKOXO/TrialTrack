@@ -98,7 +98,7 @@ const ClientFeedback = () => {
   return (
     <ClientLayout>
       <div className="px-4 md:px-7 py-4">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto">
           {/* Header */}
           <div className="pb-4 font-Lexend">
             <h1 className="text-xl md:text-2xl font-medium">System Feedback</h1>

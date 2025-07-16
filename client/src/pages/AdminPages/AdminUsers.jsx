@@ -34,7 +34,7 @@ const AdminUsers = () => {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [users, setUsers] = useState([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
