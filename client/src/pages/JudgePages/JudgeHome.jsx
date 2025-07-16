@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import JudgeLayout from "../../components/JudgeLayout";
 import axios from "axios";
 import { JudgePageLoader } from "../../components/PageLoader";
+import ResponsiveTable from "../../components/ResponsiveTable";
 import {
   FaFileAlt,
   FaCalendarAlt,
@@ -266,6 +267,59 @@ const JudgeHome = () => {
     }
   }, []);
 
+  // Table columns configuration
+  const tableColumns = [
+    {
+      key: "case",
+      header: "Case",
+      mobileLabel: "Case",
+      render: (value, row) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{row.title}</div>
+          <div className="text-sm text-gray-500">{row.caseNumber}</div>
+        </div>
+      ),
+    },
+    {
+      key: "client",
+      header: "Client",
+      mobileLabel: "Client",
+    },
+    {
+      key: "status",
+      header: "Status",
+      mobileLabel: "Status",
+      render: (value) => (
+        <span
+          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            value === "Open"
+              ? "bg-blue-100 text-blue-800"
+              : value === "In Progress"
+              ? "bg-yellow-100 text-yellow-800"
+              : value === "Closed"
+              ? "bg-green-100 text-green-800"
+              : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      mobileLabel: "Actions",
+      render: (value, row) => (
+        <Link
+          to={`/judge/cases/${row.id}`}
+          className="text-green-600 hover:text-green-700"
+        >
+          View
+        </Link>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <JudgeLayout>
@@ -401,68 +455,12 @@ const JudgeHome = () => {
                 </Link>
               </div>
 
-              <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Case
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Client
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {assignedCases.map((caseItem) => (
-                      <tr key={caseItem.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {caseItem.title}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {caseItem.caseNumber}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">
-                            {caseItem.client}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              caseItem.status === "Open"
-                                ? "bg-blue-100 text-blue-800"
-                                : caseItem.status === "In Progress"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : caseItem.status === "Closed"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {caseItem.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link
-                            to={`/judge/cases/${caseItem.id}`}
-                            className="text-green-600 hover:text-green-700 mr-3"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ResponsiveTable
+                columns={tableColumns}
+                data={assignedCases}
+                emptyMessage="No assigned cases found"
+                loading={false}
+              />
             </div>
           </div>
 

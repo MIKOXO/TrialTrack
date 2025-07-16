@@ -36,15 +36,19 @@ const CaseItem = ({ title, caseNumber, description, status, filedDate }) => {
     }
   };
   return (
-    <div className="px-4 border-b border-gray-200 py-4">
-      <div className=" flex justify-between items-start mb-2">
-        <div>
-          <h3 className="text-lg font-medium">{title}</h3>
-          <p className="text-sm text-gray-500">{caseNumber}</p>
+    <div className="px-3 md:px-4 border-b border-gray-200 py-3 md:py-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-2 sm:gap-0">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base md:text-lg font-medium break-words">
+            {title}
+          </h3>
+          <p className="text-xs md:text-sm text-gray-500">{caseNumber}</p>
         </div>
-        <div>{getStatusBadge()}</div>
+        <div className="flex-shrink-0">{getStatusBadge()}</div>
       </div>
-      <p className="text-sm text-gray-600 mb-2">{description}</p>
+      <p className="text-xs md:text-sm text-gray-600 mb-2 break-words">
+        {description}
+      </p>
       <p className="text-xs text-gray-500">Filed on {filedDate}</p>
     </div>
   );

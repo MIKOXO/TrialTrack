@@ -7,6 +7,7 @@ import AdminLayout from "../../components/AdminLayout";
 import { AdminPageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
 import { FormLoadingOverlay } from "../../components/LoadingOverlay";
+import ResponsiveTable from "../../components/ResponsiveTable";
 import {
   FaEllipsisV,
   FaSearch,
@@ -80,6 +81,101 @@ const AdminCases = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  // Table columns configuration
+  const tableColumns = [
+    {
+      key: "title",
+      header: "Title",
+      mobileLabel: "Case",
+      render: (value, row) => (
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+          <span>{value}</span>
+          <button
+            onClick={() => openCaseDetailsModal(row)}
+            className="text-green-600 hover:text-green-800 text-xs underline self-start"
+            title="View Details"
+          >
+            View
+          </button>
+        </div>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      mobileLabel: "Type",
+    },
+    {
+      key: "date",
+      header: "Date",
+      mobileLabel: "Filed",
+    },
+    {
+      key: "assignedJudge",
+      header: "Assigned Judge",
+      mobileLabel: "Judge",
+      render: (value) => (
+        <span
+          className={`${
+            value === "Not Assigned" ? "text-red-500 italic" : "text-gray-900"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "documentCount",
+      header: "Documents",
+      mobileLabel: "Documents",
+      render: (value, row) => (
+        <button
+          onClick={() => openDocumentsModal(row)}
+          className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
+          title="View Documents"
+        >
+          <FaFolder className="w-4 h-4" />
+          <span className="font-medium">{value}</span>
+          <span className="text-xs">docs</span>
+        </button>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      mobileLabel: "Status",
+      render: (value) => (
+        <span
+          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(
+            value
+          )}`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      hideOnMobile: true,
+      render: (value, row) => (
+        <div className="relative inline-block text-left">
+          <button
+            data-action-button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleActionMenu(row.id, e);
+            }}
+            className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+            title="Actions"
+          >
+            <FaEllipsisV />
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   // Helper function to get file icon based on mime type
   const getFileIcon = (mimeType) => {
@@ -252,7 +348,6 @@ const AdminCases = () => {
         // Fetch cases
         const casesResponse = await casesAPI.getCases();
         const casesData = casesResponse.data;
-        console.log("Raw cases data from backend:", casesData);
 
         // Fetch document counts for each case
         const casesWithDocCounts = await Promise.all(
@@ -302,7 +397,6 @@ const AdminCases = () => {
         }));
 
         setCases(transformedCases);
-        console.log("Admin Cases - Loaded cases:", transformedCases);
 
         // Fetch users to get judges
         const usersResponse = await authAPI.getUsers();
@@ -634,151 +728,18 @@ const AdminCases = () => {
           </select>
         </div>
 
-        {/* Cases Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Case ID
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Title
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Type
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Assigned Judge
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Documents
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentCases.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="8"
-                    className="px-6 py-4 text-center text-gray-500"
-                  >
-                    No cases found.{" "}
-                    {cases.length === 0
-                      ? "Loading..."
-                      : "Try adjusting your filters."}
-                  </td>
-                </tr>
-              ) : (
-                currentCases.map((caseItem) => (
-                  <tr key={caseItem.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {caseItem.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <span>{caseItem.title}</span>
-                        <button
-                          onClick={() => openCaseDetailsModal(caseItem)}
-                          className="text-green-600 hover:text-green-800 text-xs underline"
-                          title="View Details"
-                        >
-                          View
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span
-                        className={`${
-                          caseItem.assignedJudge === "Not Assigned"
-                            ? "text-red-500 italic"
-                            : "text-gray-900"
-                        }`}
-                      >
-                        {caseItem.assignedJudge}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => openDocumentsModal(caseItem)}
-                        className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
-                        title="View Documents"
-                      >
-                        <FaFolder className="w-4 h-4" />
-                        <span className="font-medium">
-                          {caseItem.documentCount}
-                        </span>
-                        <span className="text-xs">docs</span>
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(
-                          caseItem.status
-                        )}`}
-                      >
-                        {caseItem.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="relative inline-block text-left">
-                        <button
-                          data-action-button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleActionMenu(caseItem.id, e);
-                          }}
-                          className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
-                          title="Actions"
-                        >
-                          <FaEllipsisV />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div>
+          {/* Cases Table */}
+          <ResponsiveTable
+            columns={tableColumns}
+            data={currentCases}
+            emptyMessage={
+              cases.length === 0
+                ? "Loading..."
+                : "No cases found. Try adjusting your filters."
+            }
+            loading={false}
+          />
 
           {/* Dropdown Menu - Rendered outside table to avoid overflow issues */}
           {actionMenuOpen && dropdownPosition && (
@@ -1011,15 +972,15 @@ const AdminCases = () => {
             message="Assigning judge..."
           >
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+              <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-900">
                     Assign Judge to Case
                   </h2>
                   <button
                     onClick={closeAssignModal}
                     disabled={assignLoading}
-                    className="text-gray-400 hover:text-gray-600 text-xl"
+                    className="text-gray-400 hover:text-gray-600 text-xl p-1"
                   >
                     ×
                   </button>
@@ -1027,7 +988,7 @@ const AdminCases = () => {
 
                 <div className="mb-4 p-3 bg-gray-50 rounded-md">
                   <p className="text-sm text-gray-600">Case:</p>
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 text-sm md:text-base break-words">
                     {selectedCase?.title}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -1035,12 +996,12 @@ const AdminCases = () => {
                   </p>
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-4 md:mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Judge *
                   </label>
                   <select
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
                     value={selectedJudge}
                     onChange={(e) => setSelectedJudge(e.target.value)}
                     disabled={assignLoading}
@@ -1059,11 +1020,11 @@ const AdminCases = () => {
                   )}
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3">
                   <button
                     onClick={closeAssignModal}
                     disabled={assignLoading}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ease-in-out duration-300"
+                    className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ease-in-out duration-300 text-sm md:text-base order-2 md:order-1"
                   >
                     Cancel
                   </button>
@@ -1072,7 +1033,7 @@ const AdminCases = () => {
                     loading={assignLoading}
                     loadingText="Assigning..."
                     disabled={!selectedJudge}
-                    className="bg-tertiary text-white px-4 py-2 rounded-md"
+                    className="w-full md:w-auto bg-tertiary text-white px-4 py-2 rounded-md text-sm md:text-base order-1 md:order-2"
                   >
                     Assign Judge
                   </LoadingButton>
@@ -1085,14 +1046,14 @@ const AdminCases = () => {
         {/* Change Status Modal */}
         {showStatusModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900">
                   Change Case Status
                 </h2>
                 <button
                   onClick={closeStatusModal}
-                  className="text-gray-400 hover:text-gray-600 text-xl"
+                  className="text-gray-400 hover:text-gray-600 text-xl p-1"
                 >
                   ×
                 </button>
@@ -1100,18 +1061,18 @@ const AdminCases = () => {
 
               <div className="mb-4 p-3 bg-gray-50 rounded-md">
                 <p className="text-sm text-gray-600">Case:</p>
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-gray-900 text-sm md:text-base break-words">
                   {selectedCase?.title}
                 </p>
                 <p className="text-xs text-gray-500">ID: {selectedCase?.id}</p>
               </div>
 
-              <div className="mb-6">
+              <div className="mb-4 md:mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Status *
                 </label>
                 <select
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
                 >
@@ -1122,17 +1083,17 @@ const AdminCases = () => {
                 </select>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3">
                 <button
                   onClick={closeStatusModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
+                  className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300 text-sm md:text-base order-2 md:order-1"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleStatusChange}
                   disabled={!newStatus}
-                  className={`px-4 py-2 rounded-md ease-in-out duration-300 ${
+                  className={`w-full md:w-auto px-4 py-2 rounded-md ease-in-out duration-300 text-sm md:text-base order-1 md:order-2 ${
                     !newStatus
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-tertiary text-white hover:bg-green-700"
@@ -1150,38 +1111,38 @@ const AdminCases = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
               {/* Modal Header */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-0">
+                <div className="min-w-0">
+                  <h2 className="text-lg md:text-2xl font-semibold text-gray-900 break-words">
                     Case Details
                   </h2>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs md:text-sm text-gray-600 break-words">
                     Case ID: {selectedCaseDetails.id}
                   </p>
                 </div>
                 <button
                   onClick={closeCaseDetailsModal}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 self-end md:self-auto flex-shrink-0"
                   title="Close"
                 >
-                  <FaTimes className="w-5 h-5" />
+                  <FaTimes className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
 
               {/* Modal Content */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                 {/* Basic Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                    <FaFileAlt className="mr-2 text-green-600" />
+                <div className="bg-gray-50 rounded-lg p-3 md:p-4">
+                  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 flex items-center">
+                    <FaFileAlt className="mr-2 text-green-600 flex-shrink-0" />
                     Basic Information
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
                         Title
                       </label>
-                      <p className="mt-1 text-sm text-gray-900">
+                      <p className="mt-1 text-sm text-gray-900 break-words">
                         {selectedCaseDetails.title}
                       </p>
                     </div>
@@ -1439,10 +1400,10 @@ const AdminCases = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end space-x-3">
+              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 md:px-6 py-4 flex flex-col md:flex-row justify-end gap-3 md:gap-3">
                 <button
                   onClick={closeCaseDetailsModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors text-sm md:text-base order-3 md:order-1"
                 >
                   Close
                 </button>
@@ -1456,7 +1417,7 @@ const AdminCases = () => {
                     (selectedCaseDetails.assignedJudge &&
                       selectedCaseDetails.assignedJudge !== "Not Assigned")
                   }
-                  className={`px-4 py-2 rounded-md transition-colors ${
+                  className={`w-full md:w-auto px-4 py-2 rounded-md transition-colors text-sm md:text-base order-2 md:order-2 ${
                     selectedCaseDetails.status === "Closed" ||
                     (selectedCaseDetails.assignedJudge &&
                       selectedCaseDetails.assignedJudge !== "Not Assigned")
@@ -1483,7 +1444,7 @@ const AdminCases = () => {
                     openStatusModal(selectedCaseDetails);
                   }}
                   disabled={selectedCaseDetails.status === "Closed"}
-                  className={`px-4 py-2 rounded-md transition-colors ${
+                  className={`w-full md:w-auto px-4 py-2 rounded-md transition-colors text-sm md:text-base order-1 md:order-3 ${
                     selectedCaseDetails.status === "Closed"
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-green-600 text-white hover:bg-green-700"
@@ -1501,23 +1462,23 @@ const AdminCases = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-xl">
               {/* Modal Header */}
-              <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                    <FaFolderOpen className="mr-3 text-green-600" />
-                    Case Documents
+              <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-0">
+                <div className="min-w-0">
+                  <h2 className="text-lg md:text-2xl font-semibold text-gray-900 flex items-center">
+                    <FaFolderOpen className="mr-2 md:mr-3 text-green-600 flex-shrink-0" />
+                    <span className="break-words">Case Documents</span>
                   </h2>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-xs md:text-sm text-gray-600 mt-1 break-words">
                     {selectedCaseForDocs.title} - {caseDocuments.length}{" "}
                     document(s)
                   </p>
                 </div>
                 <button
                   onClick={closeDocumentsModal}
-                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100"
+                  className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 self-end md:self-auto flex-shrink-0"
                   title="Close"
                 >
-                  <FaTimes className="w-5 h-5" />
+                  <FaTimes className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </div>
 
@@ -1649,10 +1610,10 @@ const AdminCases = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+              <div className="bg-gray-50 border-t border-gray-200 px-4 md:px-6 py-4 flex justify-end">
                 <button
                   onClick={closeDocumentsModal}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors text-sm md:text-base"
                 >
                   Close
                 </button>

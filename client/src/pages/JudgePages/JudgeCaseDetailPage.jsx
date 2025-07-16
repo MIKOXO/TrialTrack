@@ -118,9 +118,7 @@ const JudgeCaseDetailPage = () => {
   const fetchDocuments = async () => {
     try {
       setDocumentsLoading(true);
-      console.log("Fetching documents for case:", id);
       const response = await documentsAPI.getCaseDocuments(id);
-      console.log("Documents response:", response.data);
       setDocuments(response.data);
     } catch (err) {
       console.error("Error fetching documents:", err);
@@ -156,22 +154,7 @@ const JudgeCaseDetailPage = () => {
   // Handle document download
   const handleDocumentDownload = async (document) => {
     try {
-      console.log("=== DOWNLOAD DEBUG ===");
-      console.log("Full document object:", document);
-      console.log("Case ID:", id);
-      console.log("Document name field:", document.name);
-      console.log("Document originalName field:", document.originalName);
-      console.log("Document _id:", document._id);
-
-      // Try the API call
-      console.log(
-        "Making API call to:",
-        `/api/documents/view/${id}/${document.name}?download=true`
-      );
       const response = await documentsAPI.downloadDocument(id, document.name);
-      console.log("Download response received:", response);
-      console.log("Response data type:", typeof response.data);
-      console.log("Response data size:", response.data.size);
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
@@ -183,12 +166,7 @@ const JudgeCaseDetailPage = () => {
       window.URL.revokeObjectURL(url);
       showSuccess(`Downloaded ${document.originalName || document.name}`);
     } catch (err) {
-      console.error("=== DOWNLOAD ERROR ===");
-      console.error("Full error object:", err);
-      console.error("Error response:", err.response);
-      console.error("Error status:", err.response?.status);
-      console.error("Error data:", err.response?.data);
-      console.error("Error message:", err.message);
+      console.error("Error downloading document:", err);
 
       // Show more specific error message
       if (err.response?.status === 404) {
@@ -210,30 +188,13 @@ const JudgeCaseDetailPage = () => {
   // Handle document view
   const handleDocumentView = async (document) => {
     try {
-      console.log("=== VIEW DEBUG ===");
-      console.log("Full document object:", document);
-      console.log("Case ID:", id);
-      console.log("Document name field:", document.name);
-      console.log(
-        "Making API call to:",
-        `/api/documents/view/${id}/${document.name}`
-      );
-
       const response = await documentsAPI.viewDocument(id, document.name);
-      console.log("View response received:", response);
-      console.log("Response data type:", typeof response.data);
-      console.log("Response data size:", response.data.size);
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       window.open(url, "_blank");
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("=== VIEW ERROR ===");
-      console.error("Full error object:", err);
-      console.error("Error response:", err.response);
-      console.error("Error status:", err.response?.status);
-      console.error("Error data:", err.response?.data);
-      console.error("Error message:", err.message);
+      console.error("Error viewing document:", err);
 
       // Show more specific error message
       if (err.response?.status === 404) {
@@ -455,7 +416,7 @@ const JudgeCaseDetailPage = () => {
   if (!caseData) {
     return (
       <JudgeLayout>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-3 md:px-4 py-3 rounded relative mx-4 md:mx-0">
           <strong className="font-bold">Error!</strong>
           <span className="block sm:inline"> Case not found.</span>
         </div>
@@ -465,23 +426,25 @@ const JudgeCaseDetailPage = () => {
 
   return (
     <JudgeLayout>
-      <div className="mb-6">
+      <div className="mb-4 md:mb-6 px-4 md:px-0">
         <Link
           to="/judge/cases"
-          className="flex items-center text-green-600 hover:text-green-700 mb-4"
+          className="flex items-center text-green-600 hover:text-green-700 mb-4 text-sm md:text-base"
         >
           <FaArrowLeft className="mr-2" /> Back to Cases
         </Link>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 md:gap-0">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray-800 break-words">
               {caseData.title}
             </h1>
-            <p className="text-gray-600">Case ID: {caseData._id}</p>
+            <p className="text-gray-600 text-sm md:text-base break-all">
+              Case ID: {caseData._id}
+            </p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-3 flex-shrink-0">
             <span
-              className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(
+              className={`px-3 py-1 rounded-full text-sm font-medium text-center ${getStatusClass(
                 caseData.status
               )}`}
             >
@@ -490,7 +453,7 @@ const JudgeCaseDetailPage = () => {
             <button
               onClick={() => setShowStatusModal(true)}
               disabled={caseData.status === "Closed"}
-              className={`px-4 py-2 rounded-md transition-colors flex items-center ${
+              className={`px-3 md:px-4 py-2 rounded-md transition-colors flex items-center justify-center text-sm md:text-base ${
                 caseData.status === "Closed"
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
@@ -501,36 +464,42 @@ const JudgeCaseDetailPage = () => {
                   : "Update the status of this case"
               }
             >
-              <FaEdit className="mr-2" /> Update Status
+              <FaEdit className="mr-2" />
+              <span className="hidden sm:inline">Update Status</span>
+              <span className="sm:hidden">Update</span>
               {caseData.status === "Closed" && (
-                <span className="ml-2 text-xs">(Case Closed)</span>
+                <span className="ml-2 text-xs hidden md:inline">
+                  (Case Closed)
+                </span>
               )}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0">
         {/* Case Information */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 md:space-y-6">
           {/* Case Details Card */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-medium mb-4 flex items-center">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-medium mb-4 flex items-center">
               <FaFileAlt className="mr-2 text-green-600" />
               Case Details
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Title
                 </label>
-                <p className="text-gray-900">{caseData.title}</p>
+                <p className="text-gray-900 text-sm md:text-base break-words">
+                  {caseData.title}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Type
                 </label>
-                <p className="text-gray-900">
+                <p className="text-gray-900 text-sm md:text-base">
                   {caseData.caseType
                     ? caseData.caseType === "smallClaims"
                       ? "SmallClaims"
@@ -555,47 +524,51 @@ const JudgeCaseDetailPage = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Filed Date
                 </label>
-                <p className="text-gray-900">
+                <p className="text-gray-900 text-sm md:text-base">
                   {formatDate(caseData.createdAt)}
                 </p>
               </div>
             </div>
             {caseData.description && (
-              <div className="mt-4">
+              <div className="mt-3 md:mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
                 </label>
-                <p className="text-gray-900">{caseData.description}</p>
+                <p className="text-gray-900 text-sm md:text-base break-words">
+                  {caseData.description}
+                </p>
               </div>
             )}
           </div>
 
           {/* Hearings */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium flex items-center">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3 sm:gap-0">
+              <h2 className="text-base md:text-lg font-medium flex items-center">
                 <FaGavel className="mr-2 text-green-600" />
                 Hearings ({hearings.length})
               </h2>
               {caseData.status !== "Closed" && (
                 <button
                   onClick={() => setShowHearingModal(true)}
-                  className="bg-tertiary text-white px-4 py-2 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center text-sm"
+                  className="w-full sm:w-auto bg-tertiary text-white px-3 md:px-4 py-2 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center text-sm"
                 >
-                  <FaPlus className="mr-2" /> Schedule Hearing
+                  <FaPlus className="mr-2" />
+                  <span className="hidden sm:inline">Schedule Hearing</span>
+                  <span className="sm:hidden">Schedule</span>
                 </button>
               )}
             </div>
 
             {hearings.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">
+              <div className="text-center py-6 md:py-8">
+                <p className="text-gray-500 text-sm md:text-base">
                   No hearings scheduled for this case.
                 </p>
                 {caseData.status !== "Closed" && (
                   <button
                     onClick={() => setShowHearingModal(true)}
-                    className="mt-2 text-green-600 hover:text-green-700"
+                    className="mt-2 text-green-600 hover:text-green-700 text-sm md:text-base"
                   >
                     Schedule the first hearing
                   </button>
@@ -606,33 +579,37 @@ const JudgeCaseDetailPage = () => {
                 {hearings.map((hearing) => (
                   <div
                     key={hearing._id}
-                    className="border border-gray-200 rounded-lg p-4"
+                    className="border border-gray-200 rounded-lg p-3 md:p-4"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-xs md:text-sm text-gray-600 gap-2 sm:gap-0">
                           <div className="flex items-center">
-                            <FaCalendarAlt className="mr-1" />
-                            {formatDate(hearing.date)}
+                            <FaCalendarAlt className="mr-1 flex-shrink-0" />
+                            <span className="break-words">
+                              {formatDate(hearing.date)}
+                            </span>
                           </div>
                           <div className="flex items-center">
-                            <FaClock className="mr-1" />
-                            {hearing.time}
+                            <FaClock className="mr-1 flex-shrink-0" />
+                            <span>{hearing.time}</span>
                           </div>
                           <div className="flex items-center">
-                            <FaMapMarkerAlt className="mr-1" />
-                            {hearing.court?.name || "TBD"}
+                            <FaMapMarkerAlt className="mr-1 flex-shrink-0" />
+                            <span className="break-words">
+                              {hearing.court?.name || "TBD"}
+                            </span>
                           </div>
                         </div>
                         {hearing.notes && (
-                          <p className="mt-2 text-sm text-gray-700">
+                          <p className="mt-2 text-xs md:text-sm text-gray-700 break-words">
                             {hearing.notes}
                           </p>
                         )}
                       </div>
                       <Link
                         to={`/judge/hearings/${hearing._id}`}
-                        className="text-green-600 hover:text-green-700 text-sm font-medium"
+                        className="text-green-600 hover:text-green-700 text-xs md:text-sm font-medium flex-shrink-0 self-start md:self-auto"
                       >
                         View Details
                       </Link>
@@ -644,23 +621,25 @@ const JudgeCaseDetailPage = () => {
           </div>
 
           {/* Documents */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium flex items-center">
+              <h2 className="text-base md:text-lg font-medium flex items-center">
                 <FaFolder className="mr-2 text-green-600" />
                 Documents ({documents.length})
               </h2>
             </div>
 
             {documentsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading documents...</p>
+              <div className="text-center py-6 md:py-8">
+                <div className="animate-spin rounded-full h-6 md:h-8 w-6 md:w-8 border-b-2 border-green-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2 text-sm md:text-base">
+                  Loading documents...
+                </p>
               </div>
             ) : documents.length === 0 ? (
-              <div className="text-center py-8">
-                <FaFolder className="mx-auto text-gray-400 text-4xl mb-4" />
-                <p className="text-gray-500">
+              <div className="text-center py-6 md:py-8">
+                <FaFolder className="mx-auto text-gray-400 text-3xl md:text-4xl mb-4" />
+                <p className="text-gray-500 text-sm md:text-base">
                   No documents found for this case.
                 </p>
               </div>
@@ -669,18 +648,18 @@ const JudgeCaseDetailPage = () => {
                 {documents.map((document) => (
                   <div
                     key={document._id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                    className="border border-gray-200 rounded-lg p-3 md:p-4 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-2xl">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+                      <div className="flex items-start md:items-center space-x-3 min-w-0 flex-1">
+                        <div className="text-xl md:text-2xl flex-shrink-0">
                           {getFileIcon(document.mimeType)}
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-gray-900 text-sm md:text-base break-words">
                             {document.originalName || document.name}
                           </h4>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-xs md:text-sm text-gray-500 gap-1 sm:gap-0">
                             <span>{formatFileSize(document.size)}</span>
                             <span>
                               Uploaded:{" "}
@@ -691,22 +670,22 @@ const JudgeCaseDetailPage = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         <button
                           onClick={() => handleDocumentView(document)}
-                          className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                          className="flex items-center px-2 md:px-3 py-1 text-xs md:text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                           title="View Document"
                         >
                           <FaEye className="mr-1" />
-                          View
+                          <span className="hidden sm:inline">View</span>
                         </button>
                         <button
                           onClick={() => handleDocumentDownload(document)}
-                          className="flex items-center px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                          className="flex items-center px-2 md:px-3 py-1 text-xs md:text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                           title="Download Document"
                         >
                           <FaDownload className="mr-1" />
-                          Download
+                          <span className="hidden sm:inline">Download</span>
                         </button>
                       </div>
                     </div>
@@ -718,15 +697,17 @@ const JudgeCaseDetailPage = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-medium mb-4">Quick Actions</h3>
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-medium mb-4">
+              Quick Actions
+            </h3>
             <div className="space-y-3">
               <button
                 onClick={() => setShowStatusModal(true)}
                 disabled={caseData.status === "Closed"}
-                className={`w-full px-4 py-2 rounded-md flex items-center justify-center ${
+                className={`w-full px-3 md:px-4 py-2 rounded-md flex items-center justify-center text-sm md:text-base ${
                   caseData.status === "Closed"
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : "bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
@@ -745,14 +726,14 @@ const JudgeCaseDetailPage = () => {
               {caseData.status !== "Closed" && (
                 <button
                   onClick={() => setShowHearingModal(true)}
-                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center ease-in-out duration-300"
+                  className="w-full bg-blue-600 text-white px-3 md:px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center ease-in-out duration-300 text-sm md:text-base"
                 >
                   <FaCalendarAlt className="mr-2" /> Schedule Hearing
                 </button>
               )}
               <Link
                 to="/judge/calendar"
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center justify-center ease-in-out duration-300"
+                className="w-full bg-gray-600 text-white px-3 md:px-4 py-2 rounded-md hover:bg-gray-700 flex items-center justify-center ease-in-out duration-300 text-sm md:text-base"
               >
                 <FaCalendarAlt className="mr-2" /> View Calendar
               </Link>
@@ -760,20 +741,22 @@ const JudgeCaseDetailPage = () => {
           </div>
 
           {/* Case Statistics */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-medium mb-4">Case Statistics</h3>
+          <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-medium mb-4">
+              Case Statistics
+            </h3>
             <div className="space-y-3">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm md:text-base">
                 <span className="text-gray-600">Total Hearings:</span>
                 <span className="font-medium">{hearings.length}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm md:text-base">
                 <span className="text-gray-600">Upcoming Hearings:</span>
                 <span className="font-medium">
                   {hearings.filter((h) => new Date(h.date) > new Date()).length}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm md:text-base">
                 <span className="text-gray-600">Case Age:</span>
                 <span className="font-medium">
                   {Math.floor(
@@ -790,22 +773,24 @@ const JudgeCaseDetailPage = () => {
 
       {/* Status Update Modal */}
       {showStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Update Case Status</h2>
-            <p className="mb-4 text-gray-600">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">
+              Update Case Status
+            </h2>
+            <p className="mb-4 text-gray-600 text-sm md:text-base break-words">
               Change the status for case:{" "}
               <span className="font-medium">{caseData.title}</span>
             </p>
 
-            <div className="mb-6">
+            <div className="mb-4 md:mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 New Status *
               </label>
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-tertiary"
               >
                 <option value="">-- Select Status --</option>
                 <option value="Open">Open</option>
@@ -814,10 +799,10 @@ const JudgeCaseDetailPage = () => {
               </select>
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3">
               <button
                 onClick={() => setShowStatusModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
+                className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300 text-sm md:text-base order-2 md:order-1"
               >
                 Cancel
               </button>
@@ -826,7 +811,7 @@ const JudgeCaseDetailPage = () => {
                 loading={statusUpdateLoading}
                 loadingText="Updating..."
                 disabled={!newStatus}
-                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
+                className="w-full md:w-auto px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center text-sm md:text-base order-1 md:order-2"
               >
                 <FaEdit className="mr-2" />
                 Update Status
@@ -838,15 +823,17 @@ const JudgeCaseDetailPage = () => {
 
       {/* Schedule Hearing Modal */}
       {showHearingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Schedule Hearing</h2>
-            <p className="mb-4 text-gray-600">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-semibold mb-4">
+              Schedule Hearing
+            </h2>
+            <p className="mb-4 text-gray-600 text-sm md:text-base break-words">
               Schedule a hearing for case:{" "}
               <span className="font-medium">{caseData.title}</span>
             </p>
 
-            <div className="mb-4">
+            <div className="mb-3 md:mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Date *
               </label>
@@ -855,11 +842,11 @@ const JudgeCaseDetailPage = () => {
                 value={hearingDate}
                 onChange={(e) => setHearingDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary text-sm md:text-base"
               />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-3 md:mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Time *
               </label>
@@ -867,18 +854,18 @@ const JudgeCaseDetailPage = () => {
                 type="time"
                 value={hearingTime}
                 onChange={(e) => setHearingTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary text-sm md:text-base"
               />
             </div>
 
-            <div className="mb-4">
+            <div className="mb-3 md:mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Courtroom *
               </label>
               <select
                 value={selectedCourt}
                 onChange={(e) => setSelectedCourt(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary text-sm md:text-base"
               >
                 <option value="">-- Select Courtroom --</option>
                 {availableCourts.map((court) => (
@@ -889,7 +876,7 @@ const JudgeCaseDetailPage = () => {
               </select>
             </div>
 
-            <div className="mb-6">
+            <div className="mb-4 md:mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notes
               </label>
@@ -898,14 +885,14 @@ const JudgeCaseDetailPage = () => {
                 onChange={(e) => setHearingNotes(e.target.value)}
                 rows="3"
                 placeholder="Add any notes about this hearing..."
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-tertiary focus:border-terring-tertiary text-sm md:text-base resize-y"
               />
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3">
               <button
                 onClick={() => setShowHearingModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
+                className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300 text-sm md:text-base order-2 md:order-1"
               >
                 Cancel
               </button>
@@ -914,7 +901,7 @@ const JudgeCaseDetailPage = () => {
                 loading={scheduleHearingLoading}
                 loadingText="Scheduling..."
                 disabled={!hearingDate || !hearingTime || !selectedCourt}
-                className="px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center"
+                className="w-full md:w-auto px-4 py-2 bg-tertiary text-white rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center text-sm md:text-base order-1 md:order-2"
               >
                 <FaCalendarAlt className="mr-2" />
                 Schedule

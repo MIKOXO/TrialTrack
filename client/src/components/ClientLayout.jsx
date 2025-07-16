@@ -5,7 +5,13 @@ import { FaBars, FaTimes } from "react-icons/fa";
 import ProfileAvatar from "./ProfileAvatar";
 
 const ClientLayout = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Initialize sidebar state based on screen size
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return false;
+  });
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -41,42 +47,59 @@ const ClientLayout = ({ children }) => {
     };
   }, []);
 
+  // Handle responsive sidebar
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsSidebarOpen(true);
+      } else {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
-    <section className="flex h-screen">
-      {/* Mobile sidebar backdrop */}
+    <section className="flex h-screen relative">
+      {/* Mobile/Tablet sidebar backdrop - full screen */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-800 bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-gray-800 bg-opacity-50 z-30 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 rounded-md bg-white shadow-md text-gray-700 focus:outline-none"
-        >
-          {isSidebarOpen ? <FaTimes /> : <FaBars />}
-        </button>
-      </div>
 
       <div
-        className={`${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 transition-transform duration-300 ease-in-out z-40`}
+        className={`lg:w-64 lg:flex-shrink-0 ${
+          isSidebarOpen ? "fixed top-0 left-0 h-full w-64 z-40" : "hidden"
+        } lg:block lg:relative lg:h-auto transition-transform duration-300 ease-in-out`}
       >
         <ClientSidebar closeSidebar={() => setIsSidebarOpen(false)} />
       </div>
 
-      <div className="overflow-auto font-Lexend flex-1 ml-0 md:ml-64 transition-all duration-300">
+      <div className="overflow-auto font-Lexend flex-1 transition-all duration-300">
         {/* Header */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-end">
+        <header className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-30">
           <div></div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-3">
+            {/* Hamburger Menu - Only visible on mobile/tablet */}
+            <button
+              className="lg:hidden p-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              {isSidebarOpen ? (
+                <FaTimes className="w-5 h-5" />
+              ) : (
+                <FaBars className="w-5 h-5" />
+              )}
+            </button>
+
+            {/* Profile Avatar */}
             <div className="relative">
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center mr-3">
-                  <ProfileAvatar user={user} size="md" showName={true} />
-                </div>
+              <div className="flex items-center">
+                <ProfileAvatar user={user} size="md" showName={true} />
               </div>
             </div>
           </div>

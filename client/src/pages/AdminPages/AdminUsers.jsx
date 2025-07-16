@@ -5,6 +5,7 @@ import ProfileAvatar from "../../components/ProfileAvatar";
 import { AdminPageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
 import { FormLoadingOverlay } from "../../components/LoadingOverlay";
+import ResponsiveTable from "../../components/ResponsiveTable";
 import {
   FaSearch,
   FaEye,
@@ -172,6 +173,70 @@ const AdminUsers = () => {
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  // Table columns configuration
+  const tableColumns = [
+    {
+      key: "user",
+      header: "User",
+      mobileLabel: "User",
+      render: (value, row) => (
+        <div className="flex items-center">
+          <ProfileAvatar
+            user={{
+              username: row.name,
+              firstName: row.firstName,
+              lastName: row.lastName,
+              role: row.role,
+              email: row.email,
+              profilePicture: row.profilePicture,
+            }}
+            size="sm"
+            className="mr-3"
+          />
+          <div className="text-sm font-medium text-gray-900">{row.name}</div>
+        </div>
+      ),
+    },
+    {
+      key: "role",
+      header: "Role",
+      mobileLabel: "Role",
+    },
+    {
+      key: "email",
+      header: "Email",
+      mobileLabel: "Email",
+    },
+    {
+      key: "joinDate",
+      header: "Join Date",
+      mobileLabel: "Joined",
+      render: (value) => formatDate(value),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      mobileLabel: "Actions",
+      render: (value, row) => (
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+          <button
+            className="bg-green-100 text-green-800 px-3 py-1 rounded-md hover:bg-green-200 flex items-center justify-center space-x-1"
+            onClick={() => openUserDetailsModal(row)}
+          >
+            <FaEye />
+            <span>View</span>
+          </button>
+          <button
+            className="bg-red-100 text-red-800 px-3 py-1 rounded-md hover:bg-red-200"
+            onClick={() => openDeleteModal(row)}
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   // Add Judge Functions
   const validateJudgeForm = () => {
     const errs = {};
@@ -288,17 +353,19 @@ const AdminUsers = () => {
   return (
     <section>
       <AdminLayout>
-        <div className="mb-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-800">Users</h1>
-              <p className="text-gray-600 font-light">
+        <div className="mb-4 px-4 md:px-0">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 md:gap-0">
+            <div className="min-w-0">
+              <h1 className="text-lg md:text-xl font-semibold text-gray-800">
+                Users
+              </h1>
+              <p className="text-gray-600 font-light text-sm md:text-base">
                 Manage all users in the court system.
               </p>
             </div>
             <LoadingButton
               onClick={() => setShowCreateJudgeModal(true)}
-              className="bg-tertiary text-white px-7 py-2 rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center space-x-2"
+              className="w-full md:w-auto bg-tertiary text-white px-4 md:px-7 py-2 rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center justify-center space-x-2 text-sm md:text-base"
             >
               <FaGavel />
               <span>Add Judge</span>
@@ -307,31 +374,39 @@ const AdminUsers = () => {
         </div>
 
         {/* User Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-sm text-gray-500 mb-1">Total Users</h3>
-            <p className="text-2xl font-bold">{totalUsers}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6 px-4 md:px-0">
+          <div className="bg-white rounded-lg shadow-md p-3 md:p-4">
+            <h3 className="text-xs md:text-sm text-gray-500 mb-1">
+              Total Users
+            </h3>
+            <p className="text-lg md:text-2xl font-bold">{totalUsers}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-sm text-gray-500 mb-1">Active Clients</h3>
-            <p className="text-2xl font-bold">{activeClients}</p>
+          <div className="bg-white rounded-lg shadow-md p-3 md:p-4">
+            <h3 className="text-xs md:text-sm text-gray-500 mb-1">
+              Active Clients
+            </h3>
+            <p className="text-lg md:text-2xl font-bold">{activeClients}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-sm text-gray-500 mb-1">Active Judges</h3>
-            <p className="text-2xl font-bold">{activeJudges}</p>
+          <div className="bg-white rounded-lg shadow-md p-3 md:p-4">
+            <h3 className="text-xs md:text-sm text-gray-500 mb-1">
+              Active Judges
+            </h3>
+            <p className="text-lg md:text-2xl font-bold">{activeJudges}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-sm text-gray-500 mb-1">Administrative Staff</h3>
-            <p className="text-2xl font-bold">{adminStaff}</p>
+          <div className="bg-white rounded-lg shadow-md p-3 md:p-4">
+            <h3 className="text-xs md:text-sm text-gray-500 mb-1">
+              Administrative Staff
+            </h3>
+            <p className="text-lg md:text-2xl font-bold">{adminStaff}</p>
           </div>
         </div>
 
         {/* Tabs and Search */}
-        <div className="mb-6 w-[515px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
+        <div className="mb-4 md:mb-6 mx-4 md:mx-0 max-w-full md:w-[515px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
           <div className="flex flex-col md:flex-row p-2">
-            <div className="flex border-b md:border-b-0 overflow-x-auto">
+            <div className="flex border-b md:border-b-0 overflow-x-auto min-w-full md:min-w-0">
               <button
-                className={`py-3 px-8 text-center font-medium transition-all  ${
+                className={`py-2 md:py-3 px-4 md:px-8 text-center font-medium transition-all text-sm md:text-base whitespace-nowrap ${
                   activeTab === "All Users"
                     ? "bg-white rounded-lg"
                     : "border-transparent text-gray-500"
@@ -341,7 +416,7 @@ const AdminUsers = () => {
                 All Users
               </button>
               <button
-                className={`py-3 px-8 text-center font-medium transition-all  ${
+                className={`py-2 md:py-3 px-4 md:px-8 text-center font-medium transition-all text-sm md:text-base whitespace-nowrap ${
                   activeTab === "Clients"
                     ? "bg-white rounded-lg"
                     : "border-transparent text-gray-500"
@@ -351,7 +426,7 @@ const AdminUsers = () => {
                 Clients
               </button>
               <button
-                className={`py-3 px-8 text-center font-medium transition-all  ${
+                className={`py-2 md:py-3 px-4 md:px-8 text-center font-medium transition-all text-sm md:text-base whitespace-nowrap ${
                   activeTab === "Judges"
                     ? "bg-white rounded-lg"
                     : "border-transparent text-gray-500"
@@ -361,7 +436,7 @@ const AdminUsers = () => {
                 Judges
               </button>
               <button
-                className={`py-3 px-8 text-center font-medium transition-all  ${
+                className={`py-2 md:py-3 px-4 md:px-8 text-center font-medium transition-all text-sm md:text-base whitespace-nowrap ${
                   activeTab === "Admins"
                     ? "bg-white rounded-lg"
                     : "border-transparent text-gray-500"
@@ -375,145 +450,67 @@ const AdminUsers = () => {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  User
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Role
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Email
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Join Date
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <ProfileAvatar
-                        user={{
-                          username: user.name,
-                          firstName: user.firstName,
-                          lastName: user.lastName,
-                          role: user.role,
-                          email: user.email,
-                          profilePicture: user.profilePicture,
-                        }}
-                        size="sm"
-                        className="mr-3"
-                      />
-                      <div className="text-sm font-medium text-gray-900">
-                        {user.name}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{user.role}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(user.joinDate)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        className="bg-green-100 text-green-800 px-3 py-1 rounded-md hover:bg-green-200 flex items-center space-x-1"
-                        onClick={() => openUserDetailsModal(user)}
-                      >
-                        <FaEye />
-                        <span>View</span>
-                      </button>
-                      <button
-                        className="bg-red-100 text-red-800 px-3 py-1 rounded-md hover:bg-red-200"
-                        onClick={() => openDeleteModal(user)}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="mb-4 md:mb-6 px-4 md:px-0">
+          <ResponsiveTable
+            columns={tableColumns}
+            data={currentUsers}
+            emptyMessage="No users found"
+            loading={false}
+          />
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-end mt-4 space-x-2">
+          <div className="flex flex-col sm:flex-row justify-center sm:justify-end mt-4 gap-2 sm:gap-2 px-4 md:px-0">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-md ${
+              className={`px-3 md:px-4 py-2 rounded-md text-sm md:text-base ${
                 currentPage === 1
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-white text-gray-700 hover:bg-gray-100"
               } border border-gray-300`}
             >
-              Previous
+              <span className="hidden sm:inline">Previous</span>
+              <span className="sm:hidden">Prev</span>
             </button>
 
-            {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-              // Show current page and adjacent pages
-              let pageToShow;
-              if (totalPages <= 3) {
-                pageToShow = i + 1;
-              } else if (currentPage === 1) {
-                pageToShow = i + 1;
-              } else if (currentPage === totalPages) {
-                pageToShow = totalPages - 2 + i;
-              } else {
-                pageToShow = currentPage - 1 + i;
-              }
+            <div className="flex justify-center gap-1 sm:gap-2">
+              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
+                // Show current page and adjacent pages
+                let pageToShow;
+                if (totalPages <= 3) {
+                  pageToShow = i + 1;
+                } else if (currentPage === 1) {
+                  pageToShow = i + 1;
+                } else if (currentPage === totalPages) {
+                  pageToShow = totalPages - 2 + i;
+                } else {
+                  pageToShow = currentPage - 1 + i;
+                }
 
-              return (
-                <button
-                  key={pageToShow}
-                  onClick={() => setCurrentPage(pageToShow)}
-                  className={`w-10 h-10 rounded-md ${
-                    currentPage === pageToShow
-                      ? "bg-green-600 text-white"
-                      : "bg-white text-gray-700 hover:bg-gray-100"
-                  } border border-gray-300`}
-                >
-                  {pageToShow}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={pageToShow}
+                    onClick={() => setCurrentPage(pageToShow)}
+                    className={`w-8 h-8 md:w-10 md:h-10 rounded-md text-sm md:text-base ${
+                      currentPage === pageToShow
+                        ? "bg-green-600 text-white"
+                        : "bg-white text-gray-700 hover:bg-gray-100"
+                    } border border-gray-300`}
+                  >
+                    {pageToShow}
+                  </button>
+                );
+              })}
+            </div>
 
             <button
               onClick={() =>
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-md ${
+              className={`px-3 md:px-4 py-2 rounded-md text-sm md:text-base ${
                 currentPage === totalPages
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-white text-gray-700 hover:bg-gray-100"
@@ -526,19 +523,21 @@ const AdminUsers = () => {
 
         {/* Delete User Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">Delete User</h2>
-              <p className="mb-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                Delete User
+              </h2>
+              <p className="mb-4 md:mb-6 text-sm md:text-base break-words">
                 Are you sure you want to delete{" "}
                 <span className="font-medium">{selectedUser?.name}</span>? This
                 action cannot be undone.
               </p>
 
-              <div className="flex justify-end space-x-3">
+              <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300"
+                  className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 ease-in-out duration-300 text-sm md:text-base order-2 md:order-1"
                 >
                   Cancel
                 </button>
@@ -546,7 +545,7 @@ const AdminUsers = () => {
                   onClick={handleDeleteUser}
                   loading={deleteLoading}
                   loadingText="Deleting..."
-                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 ease-in-out duration-300"
+                  className="w-full md:w-auto px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 ease-in-out duration-300 text-sm md:text-base order-1 md:order-2"
                 >
                   Delete User
                 </LoadingButton>
@@ -561,29 +560,32 @@ const AdminUsers = () => {
             isVisible={createJudgeLoading}
             message="Creating judge..."
           >
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4">
+              <div className="relative top-4 md:top-20 mx-auto p-4 md:p-5 border w-full max-w-md shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
                 <div className="mt-3">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h3 className="text-base md:text-lg font-medium text-gray-900">
                       Add New Judge
                     </h3>
                     <button
                       onClick={closeJudgeModal}
-                      className="text-gray-400 text-2xl hover:text-gray-600"
+                      className="text-gray-400 text-2xl hover:text-gray-600 p-1"
                     >
                       ×
                     </button>
                   </div>
 
-                  <form onSubmit={handleCreateJudge} className="space-y-4">
-                    <div className="mb-6 relative">
+                  <form
+                    onSubmit={handleCreateJudge}
+                    className="space-y-3 md:space-y-4"
+                  >
+                    <div className="mb-4 md:mb-6 relative">
                       <input
                         type="text"
                         name="username"
                         value={newJudge.username}
                         onChange={handleJudgeInputChange}
-                        className={`peer w-full border border-gray-300 rounded-lg px-7 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1  ${
+                        className={`peer w-full border border-gray-300 rounded-lg px-6 md:px-7 pt-4 md:pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1  ${
                           judgeErrors.username
                             ? "border-red-500 focus:ring-red-500"
                             : "border-gray-300 focus:ring-tertiary"
@@ -591,21 +593,21 @@ const AdminUsers = () => {
                       />
                       <button
                         type="button"
-                        className="absolute right-4 top-4 text-gray-400 hover:text-tertiary transition-colors"
+                        className="absolute right-3 md:right-4 top-3 md:top-4 text-gray-400 hover:text-tertiary transition-colors"
                       >
-                        <FaUser />
+                        <FaUser className="text-sm md:text-base" />
                       </button>
                       <label
-                        className={`absolute left-6 text-gray-500 duration-200 transition-all ${
+                        className={`absolute left-5 md:left-6 text-gray-500 duration-200 transition-all text-sm md:text-base ${
                           newJudge.username
-                            ? " text-base -top-2.5 bg-white px-1"
-                            : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
+                            ? " -top-2.5 bg-white px-1"
+                            : " top-2 md:top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                         }`}
                       >
                         Full Name
                       </label>
                       {judgeErrors.username && (
-                        <p className="text-sm text-red-500 mt-1">
+                        <p className="text-xs md:text-sm text-red-500 mt-1">
                           {judgeErrors.username}
                         </p>
                       )}
@@ -734,11 +736,11 @@ const AdminUsers = () => {
                       )}
                     </div>
 
-                    <div className="flex justify-end space-x-3 pt-4">
+                    <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3 pt-4">
                       <button
                         type="button"
                         onClick={closeJudgeModal}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 ease-in-out duration-300 rounded-md hover:bg-gray-300"
+                        className="w-full md:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 ease-in-out duration-300 rounded-md hover:bg-gray-300 order-2 md:order-1"
                       >
                         Cancel
                       </button>
@@ -746,7 +748,7 @@ const AdminUsers = () => {
                         type="submit"
                         loading={createJudgeLoading}
                         loadingText="Creating..."
-                        className="px-5 py-3 text-sm font-medium text-white bg-tertiary ease-in-out duration-300 rounded-md hover:bg-green-700"
+                        className="w-full md:w-auto px-5 py-3 text-sm font-medium text-white bg-tertiary ease-in-out duration-300 rounded-md hover:bg-green-700 order-1 md:order-2"
                       >
                         Create Judge
                       </LoadingButton>
@@ -965,22 +967,24 @@ const UserDetailsModal = ({ user, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4">
+      <div className="relative top-4 md:top-20 mx-auto p-4 md:p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
         <div className="mt-3">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-medium text-gray-900">User Details</h3>
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h3 className="text-lg md:text-xl font-medium text-gray-900">
+              User Details
+            </h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1"
             >
-              <FaTimes className="h-6 w-6" />
+              <FaTimes className="h-5 w-5 md:h-6 md:w-6" />
             </button>
           </div>
 
           {/* User Profile Section */}
-          <div className="flex items-center space-x-4 mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 rounded-lg">
             <ProfileAvatar
               user={{
                 username: user.name,
@@ -991,15 +995,17 @@ const UserDetailsModal = ({ user, onClose }) => {
                 profilePicture: user.profilePicture,
               }}
               size="xl"
-              className="border-2 border-white shadow-md"
+              className="border-2 border-white shadow-md mx-auto sm:mx-0 flex-shrink-0"
             />
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900">
+            <div className="text-center sm:text-left min-w-0">
+              <h4 className="text-base md:text-lg font-semibold text-gray-900 break-words">
                 {user.firstName && user.lastName
                   ? `${user.firstName} ${user.lastName}`
                   : user.name}
               </h4>
-              <p className="text-gray-600">{user.email}</p>
+              <p className="text-gray-600 text-sm md:text-base break-words">
+                {user.email}
+              </p>
               <span
                 className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${getRoleBadgeColor(
                   user.role
@@ -1011,10 +1017,10 @@ const UserDetailsModal = ({ user, onClose }) => {
           </div>
 
           {/* User Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
             {/* Basic Information */}
-            <div className="space-y-4">
-              <h5 className="text-lg font-medium text-gray-900 border-b pb-2">
+            <div className="space-y-3 md:space-y-4">
+              <h5 className="text-base md:text-lg font-medium text-gray-900 border-b pb-2">
                 Basic Information
               </h5>
 
@@ -1022,14 +1028,18 @@ const UserDetailsModal = ({ user, onClose }) => {
                 <label className="block text-sm font-medium text-gray-700">
                   Username
                 </label>
-                <p className="mt-1 text-sm text-gray-900">{user.name}</p>
+                <p className="mt-1 text-sm text-gray-900 break-words">
+                  {user.name}
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Email Address
                 </label>
-                <p className="mt-1 text-sm text-gray-900">{user.email}</p>
+                <p className="mt-1 text-sm text-gray-900 break-words">
+                  {user.email}
+                </p>
               </div>
 
               <div>
@@ -1309,10 +1319,10 @@ const UserDetailsModal = ({ user, onClose }) => {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex flex-col md:flex-row justify-end gap-3 md:gap-3 pt-4 border-t">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors text-sm md:text-base"
             >
               Close
             </button>

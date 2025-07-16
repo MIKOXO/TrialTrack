@@ -111,12 +111,12 @@ const ClientHome = () => {
   if (error) {
     return (
       <ClientLayout>
-        <div className="px-7 py-4">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-            <div className="flex items-center">
+        <div className="px-4 md:px-7 py-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-3 md:px-4 py-3 rounded-lg">
+            <div className="flex items-start md:items-center">
               <div className="flex-shrink-0">
                 <svg
-                  className="h-5 w-5 text-red-400"
+                  className="h-5 w-5 text-red-400 mt-0.5 md:mt-0"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -127,9 +127,9 @@ const ClientHome = () => {
                   />
                 </svg>
               </div>
-              <div className="ml-3">
+              <div className="ml-2 md:ml-3">
                 <h3 className="text-sm font-medium">Error Loading Dashboard</h3>
-                <p className="text-sm mt-1">{error}</p>
+                <p className="text-xs md:text-sm mt-1">{error}</p>
               </div>
             </div>
           </div>
@@ -140,31 +140,31 @@ const ClientHome = () => {
 
   return (
     <ClientLayout>
-      <div className="px-7 py-4 font-Lexend">
-        <h1 className="text-2xl font-medium">
+      <div className="px-4 md:px-7 py-4 font-Lexend">
+        <h1 className="text-xl md:text-2xl font-medium">
           Welcome Back {user?.username || "Client"}
         </h1>
-        <p className="font-light text-lg mt-1">
+        <p className="font-light text-base md:text-lg mt-1">
           Welcome back to your case management portal
         </p>
       </div>
 
-      <div className="px-7 py-3 grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="px-4 md:px-7 py-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         <CaseStatusCard title="Total Cases" count={stats.totalCases} />
         <CaseStatusCard title="Open Cases" count={stats.openCases} />
         <CaseStatusCard title="Pending Cases" count={stats.pendingCases} />
         <CaseStatusCard title="Closed Cases" count={stats.closedCases} />
       </div>
 
-      <div className="px-7 py-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="px-4 md:px-7 py-3 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Recent Cases */}
         <div className="lg:col-span-2">
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium">Recent Cases</h2>
+          <div className="mb-4 md:mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2 sm:gap-0">
+              <h2 className="text-base md:text-lg font-medium">Recent Cases</h2>
               <Link
                 to="/client/mycases"
-                className="text-green-600 text-sm hover:underline"
+                className="text-green-600 text-sm hover:underline self-start sm:self-auto"
               >
                 View all cases
               </Link>
@@ -182,8 +182,10 @@ const ClientHome = () => {
                   />
                 ))
               ) : (
-                <div className="p-6 text-center text-gray-500">
-                  <p>No cases found. File your first case to get started!</p>
+                <div className="p-4 md:p-6 text-center text-gray-500">
+                  <p className="text-sm md:text-base">
+                    No cases found. File your first case to get started!
+                  </p>
                 </div>
               )}
             </div>
@@ -191,8 +193,10 @@ const ClientHome = () => {
 
           {/* Quick Actions */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h2 className="text-base md:text-lg font-medium mb-4">
+              Quick Actions
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
               <QuickAction
                 icon={<FaPlus />}
                 title="File a new case"
@@ -209,10 +213,12 @@ const ClientHome = () => {
           </div>
         </div>
 
-        {/* Upcomin Hearings */}
+        {/* Upcoming Hearings */}
         <div>
-          <h2 className="text-lg font-medium mb-4">Upcoming Hearings</h2>
-          <div className="space-y-7 bg-white rounded-lg shadow-lg overflow-hidden">
+          <h2 className="text-base md:text-lg font-medium mb-4">
+            Upcoming Hearings
+          </h2>
+          <div className="space-y-4 md:space-y-7 bg-white rounded-lg shadow-lg overflow-hidden">
             {upcomingHearings.length > 0 ? (
               upcomingHearings.map((hearing) => (
                 <HearingItem
@@ -222,8 +228,10 @@ const ClientHome = () => {
                 />
               ))
             ) : (
-              <div className="p-6 text-center text-gray-500">
-                <p>No upcoming hearings scheduled.</p>
+              <div className="p-4 md:p-6 text-center text-gray-500">
+                <p className="text-sm md:text-base">
+                  No upcoming hearings scheduled.
+                </p>
               </div>
             )}
           </div>

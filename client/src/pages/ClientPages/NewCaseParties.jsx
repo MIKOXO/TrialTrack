@@ -116,20 +116,20 @@ const NewCaseParties = () => {
   return (
     <section>
       <ClientLayout>
-        <div className="mx-7 my-4">
-          <h1 className="text-xl font-semibold text-gray-800">
+        <div className="mx-4 md:mx-7 my-4">
+          <h1 className="text-lg md:text-xl font-semibold text-gray-800">
             File a New Case
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm md:text-base">
             Submit a new legal matter to the court system.
           </p>
         </div>
 
-        {/* Pagination */}
-        <div className="mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
+        {/* Pagination - Desktop */}
+        <div className="hidden lg:block mx-4 md:mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
           <div className="flex overflow-hidden p-2">
             <button
-              className={`flex-1 py-5 px-4 text-center ${
+              className={`flex-1 py-5 px-4 text-center text-sm lg:text-base ${
                 currentStep === 1
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : " border-transparent text-gray-500"
@@ -138,7 +138,7 @@ const NewCaseParties = () => {
               Case Information
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 2
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -148,7 +148,7 @@ const NewCaseParties = () => {
               Parties Involved
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 3
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -158,7 +158,7 @@ const NewCaseParties = () => {
               Legal Details
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 4
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -170,7 +170,21 @@ const NewCaseParties = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 mx-7">
+        {/* Mobile Progress Indicator */}
+        <div className="lg:hidden mx-4 mb-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>Step {currentStep} of 4</span>
+            <span className="font-medium">Parties Involved</span>
+          </div>
+          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-tertiary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 4) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-6 mx-4 md:mx-7">
           {submitError && (
             <div
               className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
@@ -180,14 +194,14 @@ const NewCaseParties = () => {
             </div>
           )}
 
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">
             Parties Involved
           </h2>
-          <p className="text-gray-600 mb-6 font-light">
+          <p className="text-gray-600 mb-4 md:mb-6 font-light text-sm md:text-base">
             Identify the individuals or entities involved in this case
           </p>
 
-          <div className="bg-tertiary bg-opacity-15 rounded-lg border-l-4 border-green-400 p-4 mb-6">
+          <div className="bg-tertiary bg-opacity-15 rounded-lg border-l-4 border-green-400 p-3 md:p-4 mb-4 md:mb-6">
             <div className="flex">
               <div className="ml-3">
                 <p className="text-sm text-tertiary">
@@ -328,17 +342,17 @@ const NewCaseParties = () => {
               </p>
             </div>
 
-            <div className="mt-8 flex justify-between">
+            <div className="mt-6 md:mt-8 flex flex-col md:flex-row justify-between gap-3 md:gap-0">
               <button
                 type="button"
                 onClick={handleBack}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                className="w-full md:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm md:text-base order-2 md:order-1"
               >
                 Back
               </button>
               <button
                 type="submit"
-                className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300"
+                className="w-full md:w-auto px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 text-sm md:text-base font-medium order-1 md:order-2"
               >
                 Continue to documents
               </button>

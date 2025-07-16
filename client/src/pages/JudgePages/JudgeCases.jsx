@@ -5,6 +5,7 @@ import JudgeLayout from "../../components/JudgeLayout";
 import { JudgePageLoader } from "../../components/PageLoader";
 import LoadingButton from "../../components/LoadingButton";
 import { FormLoadingOverlay } from "../../components/LoadingOverlay";
+import ResponsiveTable from "../../components/ResponsiveTable";
 import useToast from "../../hooks/useToast";
 import ToastContainer from "../../components/ToastContainer";
 import { courtsAPI, documentsAPI } from "../../services/api";
@@ -233,7 +234,6 @@ const JudgeCases = () => {
         });
 
         setCases(transformedCases);
-        console.log("Judge Cases - Loaded cases:", transformedCases);
 
         setLoading(false);
       } catch (err) {
@@ -290,12 +290,6 @@ const JudgeCases = () => {
   }, [showStatusModal, showHearingModal]);
 
   const handleActionClick = (caseId, event) => {
-    console.log(
-      "Judge page - Toggle action menu for case:",
-      caseId,
-      "Current open:",
-      actionMenuOpen
-    );
     if (actionMenuOpen === caseId) {
       setActionMenuOpen(null);
       setDropdownPosition(null);
@@ -530,6 +524,142 @@ const JudgeCases = () => {
     }
   };
 
+  // Table columns configuration
+  const tableColumns = [
+    {
+      key: "title",
+      header: "Title",
+      mobileLabel: "Case",
+      render: (value, row) => (
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+          <span className="font-medium">{value}</span>
+          <div className="flex items-center space-x-2">
+            <Link
+              to={`/judge/cases/${row.id}`}
+              className="text-green-600 hover:text-green-800 text-xs underline"
+              title="View Details"
+            >
+              View
+            </Link>
+            {row.scheduledHearing && (
+              <span
+                className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full cursor-help"
+                title={`Hearing on ${new Date(
+                  row.scheduledHearing.date
+                ).toLocaleDateString()} at ${row.scheduledHearing.time} in ${
+                  row.scheduledHearing.location
+                }`}
+              >
+                Scheduled
+              </span>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      mobileLabel: "Type",
+    },
+    {
+      key: "date",
+      header: "Date",
+      mobileLabel: "Filed",
+    },
+    {
+      key: "client",
+      header: "Client",
+      mobileLabel: "Client",
+    },
+    {
+      key: "documentCount",
+      header: "Documents",
+      mobileLabel: "Documents",
+      render: (value, row) => (
+        <button
+          onClick={() => openDocumentsModal(row)}
+          className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
+          title="View Documents"
+        >
+          <FaFolder className="w-4 h-4" />
+          <span className="font-medium">{value}</span>
+          <span className="text-xs">docs</span>
+        </button>
+      ),
+    },
+    ...(activeTab === "scheduled"
+      ? [
+          {
+            key: "scheduledHearing",
+            header: "Hearing Details",
+            mobileLabel: "Hearing",
+            render: (value, row) => {
+              if (value) {
+                return (
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <FaCalendarAlt className="mr-1 text-green-600" />
+                      <span className="font-medium text-xs md:text-sm">
+                        {new Date(value.date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <FaClock className="mr-1 text-blue-600" />
+                      <span className="text-xs md:text-sm">{value.time}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <FaMapMarkerAlt className="mr-1 text-purple-600" />
+                      <span className="text-xs">{value.location}</span>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <span className="text-gray-400 italic text-xs">
+                  No hearing scheduled
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
+    {
+      key: "status",
+      header: "Status",
+      mobileLabel: "Status",
+      render: (value) => (
+        <span
+          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(
+            value
+          )}`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      hideOnMobile: true,
+      render: (value, row) => (
+        <div className="relative inline-block text-left">
+          <button
+            data-action-button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleActionClick(row.id, e);
+            }}
+            className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+            title="Actions"
+          >
+            <FaEllipsisV />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   if (loading) {
     return (
       <JudgeLayout>
@@ -561,7 +691,7 @@ const JudgeCases = () => {
         </div>
 
         {/* Tabs */}
-        <div className="mb-6 w-[680px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
+        <div className="hidden lg:block mb-6 w-[680px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
           <div className="flex border-b p-2">
             <button
               className={`py-3 px-8 text-center font-medium transition-all  ${
@@ -653,276 +783,142 @@ const JudgeCases = () => {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documents
-                  </th>
-                  {activeTab === "scheduled" && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Hearing Details
-                    </th>
-                  )}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCases.map((caseItem) => (
-                  <tr key={caseItem.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <div className="flex items-center space-x-2">
-                        <span>{caseItem.title}</span>
-                        <Link
-                          to={`/judge/cases/${caseItem.id}`}
-                          className="text-green-600 hover:text-green-800 text-xs underline"
-                          title="View Details"
-                        >
-                          View
-                        </Link>
-                        {caseItem.scheduledHearing && (
-                          <span
-                            className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full cursor-help"
-                            title={`Hearing on ${new Date(
-                              caseItem.scheduledHearing.date
-                            ).toLocaleDateString()} at ${
-                              caseItem.scheduledHearing.time
-                            } in ${caseItem.scheduledHearing.location}`}
-                          >
-                            Scheduled
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.date}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {caseItem.client}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => openDocumentsModal(caseItem)}
-                        className="flex items-center space-x-2 text-green-600 hover:text-green-800 transition-colors"
-                        title="View Documents"
-                      >
-                        <FaFolder className="w-4 h-4" />
-                        <span className="font-medium">
-                          {caseItem.documentCount}
-                        </span>
-                        <span className="text-xs">docs</span>
-                      </button>
-                    </td>
-                    {activeTab === "scheduled" && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {caseItem.scheduledHearing ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center">
-                              <FaCalendarAlt className="mr-1 text-green-600" />
-                              <span className="font-medium">
-                                {new Date(
-                                  caseItem.scheduledHearing.date
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div className="flex items-center">
-                              <FaClock className="mr-1 text-blue-600" />
-                              <span>{caseItem.scheduledHearing.time}</span>
-                            </div>
-                            <div className="flex items-center">
-                              <FaMapMarkerAlt className="mr-1 text-purple-600" />
-                              <span className="text-xs">
-                                {caseItem.scheduledHearing.location}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic">
-                            No hearing scheduled
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(
-                          caseItem.status
-                        )}`}
-                      >
-                        {caseItem.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium relative">
-                      <div className="relative inline-block text-left">
-                        <button
-                          data-action-button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleActionClick(caseItem.id, e);
-                          }}
-                          className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
-                          title="Actions"
-                        >
-                          <FaEllipsisV />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <ResponsiveTable
+            columns={tableColumns}
+            data={filteredCases}
+            emptyMessage="No cases found"
+            loading={false}
+          />
+        )}
 
-            {/* Dropdown Menu - Rendered outside table to avoid overflow issues */}
-            {actionMenuOpen && dropdownPosition && (
-              <div
-                data-dropdown-menu
-                className="fixed bg-white rounded-md shadow-xl border-2 border-red-500 overflow-hidden"
-                style={{
-                  zIndex: 9999,
-                  width: "192px",
-                  top: `${dropdownPosition.top}px`,
-                  right: `${dropdownPosition.right}px`,
+        {/* Dropdown Menu - Rendered outside table to avoid overflow issues */}
+        {actionMenuOpen && dropdownPosition && (
+          <div
+            data-dropdown-menu
+            className="fixed bg-white rounded-md shadow-xl border-2 border-red-500 overflow-hidden"
+            style={{
+              zIndex: 9999,
+              width: "192px",
+              top: `${dropdownPosition.top}px`,
+              right: `${dropdownPosition.right}px`,
+            }}
+          >
+            <div className="py-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  if (selectedCase) openStatusModal(selectedCase);
                 }}
+                disabled={(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed";
+                })()}
+                className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed"
+                    ? "text-gray-400 cursor-not-allowed bg-gray-50"
+                    : "text-gray-700 hover:bg-gray-100";
+                })()}`}
+                title={(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed"
+                    ? "Cannot change status of closed case"
+                    : "Change the status of this case";
+                })()}
               >
-                <div className="py-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      if (selectedCase) openStatusModal(selectedCase);
-                    }}
-                    disabled={(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed";
-                    })()}
-                    className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed"
-                        ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                        : "text-gray-700 hover:bg-gray-100";
-                    })()}`}
-                    title={(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed"
-                        ? "Cannot change status of closed case"
-                        : "Change the status of this case";
-                    })()}
-                  >
-                    <FaEdit
-                      className={`mr-2 ${(() => {
-                        const selectedCase = filteredCases.find(
-                          (c) => c.id === actionMenuOpen
-                        );
-                        return selectedCase?.status === "Closed"
-                          ? "text-gray-400"
-                          : "text-blue-600";
-                      })()}`}
-                    />
-                    Change Status
-                    {(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed" ? (
-                        <span className="ml-2 text-xs text-gray-400">
-                          (Case Closed)
-                        </span>
-                      ) : null;
-                    })()}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      if (selectedCase) openHearingModal(selectedCase);
-                    }}
-                    disabled={(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed";
-                    })()}
-                    className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed"
-                        ? "text-gray-400 cursor-not-allowed bg-gray-50"
-                        : "text-gray-700 hover:bg-gray-100";
-                    })()}`}
-                    title={(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed"
-                        ? "Cannot schedule hearing for closed case"
-                        : "Schedule a hearing for this case";
-                    })()}
-                  >
-                    <FaCalendarAlt
-                      className={`mr-2 ${(() => {
-                        const selectedCase = filteredCases.find(
-                          (c) => c.id === actionMenuOpen
-                        );
-                        return selectedCase?.status === "Closed"
-                          ? "text-gray-400"
-                          : "text-purple-600";
-                      })()}`}
-                    />
-                    Schedule Hearing
-                    {(() => {
-                      const selectedCase = filteredCases.find(
-                        (c) => c.id === actionMenuOpen
-                      );
-                      return selectedCase?.status === "Closed" ? (
-                        <span className="ml-2 text-xs text-gray-400">
-                          (Case Closed)
-                        </span>
-                      ) : null;
-                    })()}
-                  </button>
-                  <Link
-                    to={`/judge/cases/${actionMenuOpen}`}
-                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <FaEye className="mr-2 text-green-600" />
-                    View Details
-                  </Link>
-                </div>
-              </div>
-            )}
+                <FaEdit
+                  className={`mr-2 ${(() => {
+                    const selectedCase = filteredCases.find(
+                      (c) => c.id === actionMenuOpen
+                    );
+                    return selectedCase?.status === "Closed"
+                      ? "text-gray-400"
+                      : "text-blue-600";
+                  })()}`}
+                />
+                Change Status
+                {(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed" ? (
+                    <span className="ml-2 text-xs text-gray-400">
+                      (Case Closed)
+                    </span>
+                  ) : null;
+                })()}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  if (selectedCase) openHearingModal(selectedCase);
+                }}
+                disabled={(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed";
+                })()}
+                className={`flex items-center w-full text-left px-4 py-2 text-sm transition-colors ${(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed"
+                    ? "text-gray-400 cursor-not-allowed bg-gray-50"
+                    : "text-gray-700 hover:bg-gray-100";
+                })()}`}
+                title={(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed"
+                    ? "Cannot schedule hearing for closed case"
+                    : "Schedule a hearing for this case";
+                })()}
+              >
+                <FaCalendarAlt
+                  className={`mr-2 ${(() => {
+                    const selectedCase = filteredCases.find(
+                      (c) => c.id === actionMenuOpen
+                    );
+                    return selectedCase?.status === "Closed"
+                      ? "text-gray-400"
+                      : "text-purple-600";
+                  })()}`}
+                />
+                Schedule Hearing
+                {(() => {
+                  const selectedCase = filteredCases.find(
+                    (c) => c.id === actionMenuOpen
+                  );
+                  return selectedCase?.status === "Closed" ? (
+                    <span className="ml-2 text-xs text-gray-400">
+                      (Case Closed)
+                    </span>
+                  ) : null;
+                })()}
+              </button>
+              <Link
+                to={`/judge/cases/${actionMenuOpen}`}
+                className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <FaEye className="mr-2 text-green-600" />
+                View Details
+              </Link>
+            </div>
           </div>
         )}
 

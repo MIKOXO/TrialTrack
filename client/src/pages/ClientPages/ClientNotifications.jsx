@@ -277,10 +277,10 @@ const ClientNotifications = () => {
 
   return (
     <ClientLayout>
-      <div className="px-7 py-4">
-        <div className="flex items-center justify-between">
+      <div className="px-4 md:px-7 py-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
           <div>
-            <h1 className="text-xl font-semibold text-gray-800 flex items-center">
+            <h1 className="text-lg md:text-xl font-semibold text-gray-800 flex items-center">
               <FaBell className="mr-2 text-green-600" />
               Notifications
               {unreadCount > 0 && (
@@ -289,13 +289,13 @@ const ClientNotifications = () => {
                 </span>
               )}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm md:text-base">
               Stay updated on your case progress and important communications
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3">
             {notifications.length > 0 && (
               <>
                 <button
@@ -310,7 +310,7 @@ const ClientNotifications = () => {
                 </button>
 
                 {bulkDeleteMode && (
-                  <>
+                  <div className="flex flex-col md:flex-row gap-2 md:gap-3">
                     <button
                       onClick={selectAllOnPage}
                       className="px-3 py-2 text-sm text-green-600 hover:text-green-800 font-medium"
@@ -324,13 +324,13 @@ const ClientNotifications = () => {
                     {selectedNotifications.length > 0 && (
                       <button
                         onClick={() => setShowBulkDeleteModal(true)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium flex items-center"
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium flex items-center justify-center"
                       >
                         <FaTrash className="mr-2" />
                         Delete Selected ({selectedNotifications.length})
                       </button>
                     )}
-                  </>
+                  </div>
                 )}
               </>
             )}
@@ -345,54 +345,61 @@ const ClientNotifications = () => {
       )}
 
       {/* Filter Tabs */}
-      <div className="mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
+      <div className="mx-4 md:mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
         <div className="flex border-b border-gray-200 p-2">
           <button
             onClick={() => setFilter("all")}
-            className={`flex-1 py-5 px-4 text-center ${
+            className={`flex-1 py-3 md:py-5 px-2 md:px-4 text-center text-sm md:text-base ${
               filter === "all"
                 ? "bg-white rounded-lg text-green-600 font-medium"
                 : " border-transparent text-gray-500"
             }`}
           >
-            All ({notifications.length})
+            <span className="hidden sm:inline">
+              All ({notifications.length})
+            </span>
+            <span className="sm:hidden">All</span>
           </button>
           <button
             onClick={() => setFilter("unread")}
-            className={`flex-1 py-5 px-4 text-center ${
+            className={`flex-1 py-3 md:py-5 px-2 md:px-4 text-center text-sm md:text-base ${
               filter === "unread"
                 ? "bg-white rounded-lg text-green-600 font-medium"
                 : " border-transparent text-gray-500"
             }`}
           >
-            Unread ({unreadCount})
+            <span className="hidden sm:inline">Unread ({unreadCount})</span>
+            <span className="sm:hidden">Unread</span>
           </button>
           <button
             onClick={() => setFilter("read")}
-            className={`flex-1 py-5 px-4 text-center ${
+            className={`flex-1 py-3 md:py-5 px-2 md:px-4 text-center text-sm md:text-base ${
               filter === "read"
                 ? "bg-white rounded-lg text-green-600 font-medium"
                 : " border-transparent text-gray-500"
             }`}
           >
-            Read ({notifications.length - unreadCount})
+            <span className="hidden sm:inline">
+              Read ({notifications.length - unreadCount})
+            </span>
+            <span className="sm:hidden">Read</span>
           </button>
         </div>
       </div>
 
       {/* Notifications List */}
-      <div className="space-y-4 px-7 py-4">
+      <div className="space-y-4 px-4 md:px-7 py-4">
         {filteredNotifications.length === 0 ? (
-          <div className="text-center py-12">
-            <FaBell className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="text-center py-8 md:py-12">
+            <FaBell className="mx-auto h-10 md:h-12 w-10 md:w-12 text-gray-400 mb-4" />
+            <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
               {filter === "unread"
                 ? "No unread notifications"
                 : filter === "read"
                 ? "No read notifications"
                 : "No notifications"}
             </h3>
-            <p className="text-gray-500">
+            <p className="text-gray-500 text-sm md:text-base px-4">
               {filter === "all"
                 ? "You'll receive notifications about case updates, hearings, and important communications here."
                 : `You have no ${filter} notifications at this time.`}
@@ -404,7 +411,7 @@ const ClientNotifications = () => {
             return (
               <div
                 key={notification._id}
-                className={`bg-white rounded-lg shadow-sm border p-4 transition-all ${
+                className={`bg-white rounded-lg shadow-sm border p-3 md:p-4 transition-all ${
                   selectedNotifications.includes(actualIndex)
                     ? "ring-2 ring-green-500 border-green-500"
                     : !notification.read
@@ -419,7 +426,7 @@ const ClientNotifications = () => {
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
+                  <div className="flex items-start space-x-2 md:space-x-3 flex-1">
                     {/* Selection checkbox */}
                     {bulkDeleteMode && (
                       <div className="flex-shrink-0 mt-1">
@@ -437,8 +444,8 @@ const ClientNotifications = () => {
                     <div className="flex-shrink-0 mt-1">
                       {getNotificationIcon(notification.type)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
                         <span
                           className={`text-xs font-medium px-2 py-1 rounded ${
                             notification.type === "hearing_scheduled"
@@ -457,21 +464,28 @@ const ClientNotifications = () => {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-sm font-medium text-gray-900 mb-1">
+                      <h3 className="text-sm md:text-base font-medium text-gray-900 mb-1">
                         {notification.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 mb-2 break-words">
                         {notification.message}
                       </p>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-0">
                         <span className="text-xs text-gray-500">
-                          {new Date(
-                            notification.createdAt
-                          ).toLocaleDateString()}{" "}
-                          at{" "}
-                          {new Date(
-                            notification.createdAt
-                          ).toLocaleTimeString()}
+                          <span className="hidden md:inline">
+                            {new Date(
+                              notification.createdAt
+                            ).toLocaleDateString()}{" "}
+                            at{" "}
+                            {new Date(
+                              notification.createdAt
+                            ).toLocaleTimeString()}
+                          </span>
+                          <span className="md:hidden">
+                            {new Date(
+                              notification.createdAt
+                            ).toLocaleDateString()}
+                          </span>
                         </span>
                         <div className="flex items-center space-x-2">
                           {!notification.read && (
@@ -480,7 +494,10 @@ const ClientNotifications = () => {
                               className="text-xs text-green-600 hover:text-green-800 font-medium flex items-center transition-colors"
                             >
                               <FaEye className="mr-1" />
-                              Mark as read
+                              <span className="hidden sm:inline">
+                                Mark as read
+                              </span>
+                              <span className="sm:hidden">Read</span>
                             </button>
                           )}
 
@@ -494,7 +511,8 @@ const ClientNotifications = () => {
                               title="Delete notification"
                             >
                               <FaTrash className="mr-1" />
-                              Delete
+                              <span className="hidden sm:inline">Delete</span>
+                              <span className="sm:hidden">Del</span>
                             </button>
                           )}
                         </div>
@@ -510,82 +528,93 @@ const ClientNotifications = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-7 mt-8 flex items-center justify-between">
-          <div className="flex items-center text-sm text-gray-500">
-            Showing {startIndex + 1} to{" "}
-            {Math.min(endIndex, filteredNotifications.length)} of{" "}
-            {filteredNotifications.length} notifications
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              Previous
-            </button>
-
-            {/* Page numbers */}
-            <div className="flex items-center space-x-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => {
-                  // Show first page, last page, current page, and pages around current page
-                  if (
-                    page === 1 ||
-                    page === totalPages ||
-                    (page >= currentPage - 1 && page <= currentPage + 1)
-                  ) {
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => goToPage(page)}
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          page === currentPage
-                            ? "bg-green-600 text-white"
-                            : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  } else if (
-                    page === currentPage - 2 ||
-                    page === currentPage + 2
-                  ) {
-                    return (
-                      <span key={page} className="px-2 text-gray-400">
-                        ...
-                      </span>
-                    );
-                  }
-                  return null;
-                }
-              )}
+        <div className="px-4 md:px-7 mt-6 md:mt-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
+            <div className="flex items-center text-xs md:text-sm text-gray-500 order-2 md:order-1">
+              <span className="hidden sm:inline">
+                Showing {startIndex + 1} to{" "}
+                {Math.min(endIndex, filteredNotifications.length)} of{" "}
+                {filteredNotifications.length} notifications
+              </span>
+              <span className="sm:hidden">
+                {startIndex + 1}-
+                {Math.min(endIndex, filteredNotifications.length)} of{" "}
+                {filteredNotifications.length}
+              </span>
             </div>
 
-            <button
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentPage === totalPages
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              Next
-            </button>
+            <div className="flex items-center justify-center space-x-1 md:space-x-2 order-1 md:order-2">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                  currentPage === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
+              </button>
+
+              {/* Page numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => {
+                    // Show first page, last page, current page, and pages around current page
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={page}
+                          onClick={() => goToPage(page)}
+                          className={`px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                            page === currentPage
+                              ? "bg-green-600 text-white"
+                              : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      );
+                    } else if (
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    ) {
+                      return (
+                        <span key={page} className="px-2 text-gray-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  }
+                )}
+              </div>
+
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`px-2 md:px-3 py-2 rounded-md text-xs md:text-sm font-medium transition-colors ${
+                  currentPage === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">Next</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Quick Actions */}
       {notifications.length > 0 && unreadCount > 0 && !bulkDeleteMode && (
-        <div className="mt-8 flex justify-center">
+        <div className="mt-6 md:mt-8 flex justify-center px-4 md:px-0">
           <button
             onClick={async () => {
               // Mark all unread notifications as read
@@ -594,20 +623,23 @@ const ClientNotifications = () => {
                 await markAsRead(notification._id);
               }
             }}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center"
+            className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center justify-center"
             disabled={unreadCount === 0}
           >
             <FaCheckCircle className="mr-2" />
-            Mark All as Read ({unreadCount})
+            <span className="hidden sm:inline">
+              Mark All as Read ({unreadCount})
+            </span>
+            <span className="sm:hidden">Mark All Read ({unreadCount})</span>
           </button>
         </div>
       )}
 
       {/* Refresh Button */}
-      <div className="mt-4 flex justify-center">
+      <div className="mt-4 flex justify-center px-4 md:px-0">
         <button
           onClick={fetchNotifications}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
+          className="w-full md:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm flex items-center justify-center"
           disabled={loading}
         >
           {loading ? "Refreshing..." : "Refresh Notifications"}

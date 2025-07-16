@@ -81,11 +81,12 @@ const ClientFeedback = () => {
           key={i}
           type="button"
           onClick={() => handleRatingClick(i)}
-          className={`text-2xl transition-colors duration-200 ${
+          className={`text-xl md:text-2xl p-1 md:p-0 transition-colors duration-200 touch-manipulation ${
             i <= formData.rating
               ? "text-yellow-400 hover:text-yellow-500"
               : "text-gray-300 hover:text-yellow-300"
           }`}
+          title={`Rate ${i} star${i > 1 ? "s" : ""}`}
         >
           {i <= formData.rating ? <FaStar /> : <FaRegStar />}
         </button>
@@ -96,25 +97,25 @@ const ClientFeedback = () => {
 
   return (
     <ClientLayout>
-      <div className="px-7 py-4">
-        <div className="mx-auto">
+      <div className="px-4 md:px-7 py-4">
+        <div className="mx-auto max-w-4xl">
           {/* Header */}
           <div className="pb-4 font-Lexend">
-            <h1 className="text-2xl font-medium">System Feedback</h1>
-            <p className="font-light text-md mt-1">
+            <h1 className="text-xl md:text-2xl font-medium">System Feedback</h1>
+            <p className="font-light text-sm md:text-base mt-1">
               We value your feedback! Please share your thoughts about the
               TrialTrack system.
             </p>
           </div>
           {/* Success Message */}
           {success && (
-            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center">
-              <FaCheckCircle className="text-green-500 mr-3" />
+            <div className="mb-4 md:mb-6 bg-green-50 border border-green-200 rounded-lg p-3 md:p-4 flex items-start md:items-center">
+              <FaCheckCircle className="text-green-500 mr-2 md:mr-3 mt-0.5 md:mt-0 flex-shrink-0" />
               <div>
-                <h3 className="text-green-800 font-medium">
+                <h3 className="text-green-800 font-medium text-sm md:text-base">
                   Feedback Submitted Successfully!
                 </h3>
-                <p className="text-green-700 text-sm">
+                <p className="text-green-700 text-xs md:text-sm mt-1">
                   Thank you for your feedback. Our team will review it shortly.
                 </p>
               </div>
@@ -123,16 +124,16 @@ const ClientFeedback = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-800">{error}</p>
+            <div className="mb-4 md:mb-6 bg-red-50 border border-red-200 rounded-lg p-3 md:p-4">
+              <p className="text-red-800 text-sm md:text-base">{error}</p>
             </div>
           )}
 
           {/* Feedback Form */}
-          <div className="bg-white rounded-lg shadow-md px-7 py-5">
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md px-4 md:px-7 py-4 md:py-5">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
               {/* Subject */}
-              <div className="mb-6 relative">
+              <div className="mb-4 md:mb-6 relative">
                 <input
                   type="text"
                   id="subject"
@@ -140,14 +141,14 @@ const ClientFeedback = () => {
                   value={formData.subject}
                   onChange={handleInputChange}
                   maxLength={200}
-                  className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary border-gray-300 focus:ring-tertiary`}
+                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary border-gray-300 focus:ring-tertiary`}
                   required
                 />
                 <label
                   htmlFor="subject"
-                  className={`absolute left-5 text-gray-500 duration-200 transition-all ${
+                  className={`absolute left-3 md:left-5 text-gray-500 duration-200 transition-all text-sm md:text-base ${
                     formData.subject
-                      ? " text-base -top-2.5 bg-white px-1"
+                      ? " -top-2.5 bg-white px-1"
                       : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                   }`}
                 >
@@ -163,10 +164,12 @@ const ClientFeedback = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Overall Rating (Optional)
                 </label>
-                <div className="flex items-center space-x-1">
-                  {renderStars()}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+                  <div className="flex items-center space-x-1">
+                    {renderStars()}
+                  </div>
                   {formData.rating > 0 && (
-                    <span className="ml-3 text-sm text-gray-600">
+                    <span className="sm:ml-3 text-sm text-gray-600">
                       {formData.rating} out of 5 stars
                     </span>
                   )}
@@ -177,22 +180,22 @@ const ClientFeedback = () => {
               </div>
 
               {/* Message */}
-              <div className="relative mb-6">
+              <div className="relative mb-4 md:mb-6">
                 <textarea
                   id="message"
                   name="message"
                   value={formData.message}
                   onChange={handleInputChange}
                   maxLength={1000}
-                  rows={6}
-                  className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary border-gray-300 focus:ring-tertiary`}
+                  rows={5}
+                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary border-gray-300 focus:ring-tertiary resize-y min-h-[120px]`}
                   required
                 />
                 <label
                   htmlFor="message"
-                  className={`absolute left-5 text-gray-500 duration-200 transition-all ${
+                  className={`absolute left-3 md:left-5 text-gray-500 duration-200 transition-all text-sm md:text-base ${
                     formData.message
-                      ? " text-base -top-2.5 bg-white px-1"
+                      ? " -top-2.5 bg-white px-1"
                       : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                   }`}
                 >
@@ -212,7 +215,7 @@ const ClientFeedback = () => {
                   disabled={
                     !formData.subject.trim() || !formData.message.trim()
                   }
-                  className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 focus:ring-offset-2"
+                  className="w-full md:w-auto px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 focus:ring-offset-2 text-sm md:text-base font-medium"
                 >
                   <FaPaperPlane className="mr-2" />
                   Submit Feedback
@@ -222,11 +225,11 @@ const ClientFeedback = () => {
           </div>
 
           {/* Information Box */}
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-blue-800 font-medium mb-2">
+          <div className="mt-4 md:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
+            <h3 className="text-blue-800 font-medium mb-2 text-sm md:text-base">
               How we use your feedback:
             </h3>
-            <ul className="text-blue-700 text-sm space-y-1">
+            <ul className="text-blue-700 text-xs md:text-sm space-y-1">
               <li>• Your feedback helps us improve the TrialTrack system</li>
               <li>• All feedback is reviewed by our administrative team</li>
               <li>• We may contact you for clarification if needed</li>

@@ -128,7 +128,6 @@ const NewCase = () => {
       setErrors({});
 
       // Navigate to the parties involved step with the current form data
-      console.log("Navigating to parties step with data:", formData);
       navigate("/client/newcase/parties", {
         state: { formData },
         replace: false,
@@ -142,18 +141,18 @@ const NewCase = () => {
   return (
     <section>
       <ClientLayout>
-        <div className="px-7 py-4 font-Lexend">
-          <h1 className="text-2xl font-medium">File a New Case</h1>
-          <p className="font-light text-lg mt-1">
+        <div className="px-4 md:px-7 py-4 font-Lexend">
+          <h1 className="text-xl md:text-2xl font-medium">File a New Case</h1>
+          <p className="font-light text-base md:text-lg mt-1">
             Submit a new legal matter to the court system
           </p>
         </div>
 
-        {/* Pagination */}
-        <div className="mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
+        {/* Pagination - Desktop */}
+        <div className="hidden lg:block mx-4 md:mx-7 mb-6 bg-tertiary bg-opacity-15 rounded-md shadow-md">
           <div className="flex overflow-hidden p-2">
             <button
-              className={`flex-1 py-5 px-4 text-center ${
+              className={`flex-1 py-5 px-4 text-center text-sm lg:text-base ${
                 currentStep === 1
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : " border-transparent text-gray-500"
@@ -162,7 +161,7 @@ const NewCase = () => {
               Case Information
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 2
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -172,7 +171,7 @@ const NewCase = () => {
               Parties Involved
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 3
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -182,7 +181,7 @@ const NewCase = () => {
               Legal Details
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-center ${
+              className={`flex-1 py-3 px-4 text-center text-sm lg:text-base ${
                 currentStep === 4
                   ? "bg-white rounded-lg text-green-600 font-medium"
                   : "border-transparent text-gray-500"
@@ -194,7 +193,21 @@ const NewCase = () => {
           </div>
         </div>
 
-        <div className="mx-7 bg-white rounded-lg shadow-md p-6">
+        {/* Mobile Progress Indicator */}
+        <div className="lg:hidden mx-4 mb-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>Step {currentStep} of 4</span>
+            <span className="font-medium">Case Information</span>
+          </div>
+          <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-tertiary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(currentStep / 4) * 100}%` }}
+            ></div>
+          </div>
+        </div>
+
+        <div className="mx-4 md:mx-7 bg-white rounded-lg shadow-md p-4 md:p-6">
           {submitError && (
             <div
               className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
@@ -204,22 +217,22 @@ const NewCase = () => {
             </div>
           )}
 
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">
             Case Information
           </h2>
-          <p className="text-gray-600 mb-6 font-light">
+          <p className="text-gray-600 mb-4 md:mb-6 font-light text-sm md:text-base">
             Enter the basic details about your legal matter
           </p>
 
           <form onSubmit={handleContinue}>
-            <div className="mb-4 relative">
+            <div className="mb-4 md:mb-6 relative">
               <input
                 type="text"
                 id="title"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                   errors.title
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:ring-tertiary"
@@ -227,9 +240,9 @@ const NewCase = () => {
               />
               <label
                 htmlFor="title"
-                className={`absolute left-5 text-gray-500 duration-200 transition-all ${
+                className={`absolute left-3 md:left-5 text-gray-500 duration-200 transition-all text-sm md:text-base ${
                   formData.title
-                    ? " text-base -top-2.5 bg-white px-1"
+                    ? " -top-2.5 bg-white px-1"
                     : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                 }`}
               >
@@ -240,15 +253,15 @@ const NewCase = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
+              <div className="mb-4 md:mb-0">
                 <select
                   style={{ appearance: "none" }}
                   id="caseType"
                   name="caseType"
                   value={formData.caseType}
                   onChange={handleChange}
-                  className={`peer w-full border border-gray-300 rounded-lg px-4 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                     errors.caseType
                       ? " border-red-500 focus:ring-red-500"
                       : "text-gray-500 border-gray-300 focus:ring-tertiary"
@@ -272,7 +285,7 @@ const NewCase = () => {
                   name="court"
                   value={formData.court}
                   onChange={handleChange}
-                  className={`peer w-full border border-gray-300 rounded-lg px-4 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                     errors.court
                       ? "border-red-500 focus:ring-red-500"
                       : "text-gray-500 border-gray-300 focus:ring-tertiary"
@@ -290,7 +303,7 @@ const NewCase = () => {
               </div>
             </div>
 
-            <div className="mb-4">
+            <div className="mb-4 md:mb-6">
               <div className="relative">
                 <input
                   type="date"
@@ -298,7 +311,7 @@ const NewCase = () => {
                   name="reportDate"
                   value={formData.reportDate}
                   onChange={handleChange}
-                  className={`peer w-full border border-gray-300 rounded-lg px-4 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                     errors.reportDate
                       ? "border-red-500 focus:ring-red-500"
                       : "text-gray-500 border-gray-300 focus:ring-tertiary"
@@ -314,14 +327,14 @@ const NewCase = () => {
               )}
             </div>
 
-            <div className="mb-4 relative">
+            <div className="mb-6 md:mb-8 relative">
               <textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
                 rows="4"
-                className={`peer w-full border border-gray-300 rounded-lg px-4 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                   errors.description
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:ring-tertiary"
@@ -329,9 +342,9 @@ const NewCase = () => {
               ></textarea>
               <label
                 htmlFor="description"
-                className={`absolute left-4 text-gray-500 duration-200 transition-all ${
+                className={`absolute left-3 md:left-4 text-gray-500 duration-200 transition-all text-sm md:text-base ${
                   formData.description
-                    ? " text-base -top-2.5 bg-white px-1"
+                    ? " -top-2.5 bg-white px-1"
                     : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                 }`}
               >
@@ -344,10 +357,10 @@ const NewCase = () => {
               )}
             </div>
 
-            <div className="mt-8 flex justify-end">
+            <div className="mt-6 md:mt-8 flex justify-end">
               <button
                 type="submit"
-                className="px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300"
+                className="w-full md:w-auto px-5 py-3 bg-tertiary text-white rounded-lg shadow-400 hover:scale-95 ease-in-out duration-300 text-sm md:text-base font-medium"
               >
                 Continue to parties
               </button>

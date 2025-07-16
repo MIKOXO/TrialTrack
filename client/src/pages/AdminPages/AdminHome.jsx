@@ -247,21 +247,18 @@ const AdminHome = () => {
         // Fetch cases data
         const casesResponse = await casesAPI.getCases();
         const cases = casesResponse.data;
-        console.log("Fetched cases:", cases);
 
         // Fetch users data
         const usersResponse = await authAPI.getUsers();
         const users = usersResponse.data;
-        console.log("Fetched users:", users);
 
         // Fetch hearings data
         let hearings = [];
         try {
           const hearingsResponse = await hearingsAPI.getHearings();
           hearings = hearingsResponse.data;
-          console.log("Fetched hearings:", hearings);
         } catch (hearingError) {
-          console.warn("Could not fetch hearings:", hearingError);
+          // Silently handle hearing fetch errors
         }
 
         // Set chart data from analytics
@@ -326,9 +323,6 @@ const AdminHome = () => {
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 3)
           .forEach((caseItem, index) => {
-            // Debug log to see what client data we have
-            console.log("Case client data:", caseItem.client);
-
             // Get client name from populated client data or fallback
             let clientName = "Unknown Client";
 
@@ -366,9 +360,6 @@ const AdminHome = () => {
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
           .slice(0, 2)
           .forEach((user, index) => {
-            // Debug log to see what user data we have
-            console.log("User data:", user);
-
             // Get user display name
             let userName = "Unknown User";
 
@@ -397,9 +388,6 @@ const AdminHome = () => {
 
         // Add hearing activities
         upcomingHearingsData.slice(0, 2).forEach((hearing, index) => {
-          // Debug log to see what hearing data we have
-          console.log("Hearing data:", hearing);
-
           recentActivityData.push({
             id: `hearing-${index}`,
             title: "Hearing scheduled",

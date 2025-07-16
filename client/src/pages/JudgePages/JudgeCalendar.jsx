@@ -474,7 +474,7 @@ const JudgeCalendar = () => {
     return (
       <JudgeLayout>
         <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          className="bg-red-100 border border-red-400 text-red-700 px-3 md:px-4 py-3 rounded relative mx-4 md:mx-0"
           role="alert"
         >
           <strong className="font-bold">Error!</strong>
@@ -487,43 +487,48 @@ const JudgeCalendar = () => {
   return (
     <section>
       <JudgeLayout>
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-gray-800">Calendar</h1>
-          <p className="text-gray-600">
+        <div className="mb-4 md:mb-6 px-4 md:px-0">
+          <h1 className="text-lg md:text-xl font-semibold text-gray-800">
+            Calendar
+          </h1>
+          <p className="text-gray-600 text-sm md:text-base">
             View and manage your court hearings schedule
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-4 md:mb-6">
               <div className="flex justify-between items-center mb-4">
                 <button
                   onClick={previousMonth}
-                  className="px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                  className="px-2 md:px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors text-sm md:text-base"
                 >
-                  &lt; Previous
+                  <span className="hidden sm:inline">&lt; Previous</span>
+                  <span className="sm:hidden">&lt;</span>
                 </button>
-                <h2 className="text-lg font-medium">
+                <h2 className="text-base md:text-lg font-medium text-center">
                   {formatMonthYear(currentMonth)}
                 </h2>
                 <button
                   onClick={nextMonth}
-                  className="px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                  className="px-2 md:px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors text-sm md:text-base"
                 >
-                  Next &gt;
+                  <span className="hidden sm:inline">Next &gt;</span>
+                  <span className="sm:hidden">&gt;</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1">
+              <div className="grid grid-cols-7 gap-0.5 md:gap-1">
                 {/* Day headers */}
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
                   (day, index) => (
                     <div
                       key={index}
-                      className="text-center font-medium py-2 text-gray-600"
+                      className="text-center font-medium py-1 md:py-2 text-gray-600 text-xs md:text-sm"
                     >
-                      {day}
+                      <span className="hidden sm:inline">{day}</span>
+                      <span className="sm:hidden">{day.charAt(0)}</span>
                     </div>
                   )
                 )}
@@ -539,7 +544,7 @@ const JudgeCalendar = () => {
                   return (
                     <div
                       key={index}
-                      className={`border p-1 min-h-[80px] ${
+                      className={`border p-0.5 md:p-1 min-h-[60px] md:min-h-[80px] ${
                         !day ? "bg-gray-100" : ""
                       } ${isToday ? "bg-blue-50 border-blue-300" : ""}
                     ${isSelected ? "bg-green-50 border-green-500" : ""}
@@ -550,7 +555,7 @@ const JudgeCalendar = () => {
                         <>
                           <div className="flex justify-between items-center mb-1">
                             <span
-                              className={`text-sm ${
+                              className={`text-xs md:text-sm ${
                                 isToday ? "font-bold" : ""
                               }`}
                             >
@@ -562,7 +567,7 @@ const JudgeCalendar = () => {
                                   e.stopPropagation();
                                   openScheduleModal(dateStr);
                                 }}
-                                className="text-green-600 hover:text-green-700 text-xs"
+                                className="text-green-600 hover:text-green-700 text-xs p-1"
                                 title="Schedule hearing"
                               >
                                 <FaPlus />
@@ -570,16 +575,28 @@ const JudgeCalendar = () => {
                             )}
                           </div>
                           {hasHearings && (
-                            <div>
-                              {hearingsByDate[dateStr].map((hearing) => (
-                                <div
-                                  key={hearing.id}
-                                  className="text-xs p-1 mb-1 rounded bg-green-100 text-green-800 truncate"
-                                  title={hearing.caseTitle}
-                                >
-                                  {hearing.time} - {hearing.caseTitle}
+                            <div className="space-y-0.5">
+                              {hearingsByDate[dateStr]
+                                .slice(0, 2)
+                                .map((hearing) => (
+                                  <div
+                                    key={hearing.id}
+                                    className="text-xs p-0.5 md:p-1 mb-0.5 md:mb-1 rounded bg-green-100 text-green-800 truncate"
+                                    title={hearing.caseTitle}
+                                  >
+                                    <span className="hidden sm:inline">
+                                      {hearing.time} -{" "}
+                                    </span>
+                                    <span className="truncate">
+                                      {hearing.caseTitle}
+                                    </span>
+                                  </div>
+                                ))}
+                              {hearingsByDate[dateStr].length > 2 && (
+                                <div className="text-xs text-gray-500 text-center">
+                                  +{hearingsByDate[dateStr].length - 2} more
                                 </div>
-                              ))}
+                              )}
                             </div>
                           )}
                         </>
@@ -592,49 +609,52 @@ const JudgeCalendar = () => {
 
             {/* Selected Date Hearings */}
             {selectedDate && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-medium">
-                    Hearings for{" "}
+              <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2 sm:gap-0">
+                  <h2 className="text-base md:text-lg font-medium">
+                    <span className="hidden sm:inline">Hearings for </span>
+                    <span className="sm:hidden">Hearings - </span>
                     {new Date(selectedDate).toLocaleDateString("en-US", {
-                      weekday: "long",
+                      weekday: "short",
                       year: "numeric",
-                      month: "long",
+                      month: "short",
                       day: "numeric",
                     })}
                   </h2>
                   <button
                     onClick={() => openScheduleModal(selectedDate)}
-                    className="bg-tertiary text-white px-3 py-1 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center text-sm"
+                    className="w-full sm:w-auto bg-tertiary text-white px-3 py-1 rounded-md hover:bg-green-700 ease-in-out duration-300 flex items-center justify-center text-xs md:text-sm"
                   >
-                    <FaPlus className="mr-1" /> Schedule Hearing
+                    <FaPlus className="mr-1" />
+                    <span className="hidden sm:inline">Schedule Hearing</span>
+                    <span className="sm:hidden">Schedule</span>
                   </button>
                 </div>
 
                 {selectedDateHearings.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
+                  <p className="text-gray-500 text-center py-3 md:py-4 text-sm md:text-base">
                     No hearings scheduled for this date.
                   </p>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {selectedDateHearings.map((hearing) => (
                       <div
                         key={hearing.id}
-                        className="border-b pb-4 last:border-b-0 last:pb-0"
+                        className="border-b pb-3 md:pb-4 last:border-b-0 last:pb-0"
                       >
-                        <div className="flex justify-between">
-                          <div>
-                            <h3 className="font-medium text-lg">
+                        <div className="flex flex-col md:flex-row md:justify-between gap-2 md:gap-0">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-base md:text-lg break-words">
                               {hearing.caseTitle}
                             </h3>
-                            <p className="text-gray-500 text-sm mb-2">
+                            <p className="text-gray-500 text-xs md:text-sm mb-2 break-words">
                               Case #{hearing.caseNumber}
                             </p>
                           </div>
-                          <div className="relative">
+                          <div className="relative flex-shrink-0">
                             <button
                               onClick={() => handleActionClick(hearing.id)}
-                              className="text-gray-400 hover:text-gray-600"
+                              className="text-gray-400 hover:text-gray-600 p-2"
                             >
                               <FaEllipsisH />
                             </button>
@@ -669,20 +689,24 @@ const JudgeCalendar = () => {
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2 mt-3">
-                          <div className="flex items-center text-sm">
-                            <FaClock className="text-gray-400 mr-2" />
+                          <div className="flex items-center text-xs md:text-sm">
+                            <FaClock className="text-gray-400 mr-2 flex-shrink-0" />
                             <span>{hearing.time}</span>
                           </div>
-                          <div className="flex items-center text-sm">
-                            <FaMapMarkerAlt className="text-gray-400 mr-2" />
-                            <span>{hearing.location}</span>
+                          <div className="flex items-center text-xs md:text-sm">
+                            <FaMapMarkerAlt className="text-gray-400 mr-2 flex-shrink-0" />
+                            <span className="break-words">
+                              {hearing.location}
+                            </span>
                           </div>
                           {hearing.parties.length > 0 && (
-                            <div className="flex items-start text-sm">
-                              <FaUserTie className="text-gray-400 mr-2 mt-1" />
-                              <div>
+                            <div className="flex items-start text-xs md:text-sm">
+                              <FaUserTie className="text-gray-400 mr-2 mt-1 flex-shrink-0" />
+                              <div className="min-w-0">
                                 <span className="font-medium">Parties: </span>
-                                {hearing.parties.join(", ")}
+                                <span className="break-words">
+                                  {hearing.parties.join(", ")}
+                                </span>
                               </div>
                             </div>
                           )}
@@ -696,13 +720,15 @@ const JudgeCalendar = () => {
           </div>
 
           {/* Upcoming Hearings Sidebar */}
-          <div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Upcoming Hearings</h2>
+          <div className="space-y-4 md:space-y-6">
+            <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2 sm:gap-0">
+                <h2 className="text-base md:text-lg font-medium">
+                  Upcoming Hearings
+                </h2>
                 <Link
                   to="/judge/hearings"
-                  className="text-tertiary text-sm hover:underline"
+                  className="text-tertiary text-xs md:text-sm hover:underline self-start sm:self-auto"
                 >
                   View All
                 </Link>

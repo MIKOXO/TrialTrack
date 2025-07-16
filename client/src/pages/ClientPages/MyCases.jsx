@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { FaPlus, FaEye, FaFile } from "react-icons/fa";
 import { casesAPI } from "../../services/api";
 import { ClientPageLoader, InlineLoader } from "../../components/PageLoader";
+import ResponsiveTable from "../../components/ResponsiveTable";
 
 const MyCases = () => {
   const [cases, setCases] = useState([]);
@@ -113,6 +114,50 @@ const MyCases = () => {
     }
   };
 
+  // Table columns configuration
+  const tableColumns = [
+    {
+      key: "id",
+      header: "Case ID",
+      mobileLabel: "ID",
+    },
+    {
+      key: "title",
+      header: "Title",
+      mobileLabel: "Case",
+    },
+    {
+      key: "type",
+      header: "Type",
+      mobileLabel: "Type",
+    },
+    {
+      key: "filingDate",
+      header: "Filing Date",
+      mobileLabel: "Filed",
+    },
+    {
+      key: "status",
+      header: "Status",
+      mobileLabel: "Status",
+      render: (value) => getStatusBadge(value),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      mobileLabel: "Actions",
+      render: (value, row) => (
+        <Link
+          to={`/client/case/${row.id}`}
+          className="text-green-600 hover:text-green-900 flex items-center"
+        >
+          <FaEye className="mr-1" />
+          View Details
+        </Link>
+      ),
+    },
+  ];
+
   // Show loading state
   if (loading) {
     return (
@@ -156,7 +201,7 @@ const MyCases = () => {
   return (
     <section>
       <ClientLayout>
-        <div className="mx-5 my-2 flex justify-between items-center mb-6">
+        <div className="mx-5 my-2 flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6">
           <div>
             <h1 className="text-xl font-medium text-gray-800">My Cases</h1>
             <p className="text-gray-600 font-light">
@@ -165,14 +210,14 @@ const MyCases = () => {
           </div>
           <Link
             to="/client/newcase"
-            className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center"
+            className="mt-3 lg:mt-0 bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 flex items-center"
           >
             <FaPlus className="mr-2" /> File New Case
           </Link>
         </div>
 
         {/* Tab Navigation */}
-        <div className="w-[630px] mb-6 mx-5 rounded-lg shadow-md bg-tertiary bg-opacity-15">
+        <div className="hidden lg:block w-[630px] mb-6 mx-5 rounded-lg shadow-md bg-tertiary bg-opacity-15">
           <div className="p-2">
             <nav className="-mb-px gap-10 flex">
               {tabs.map((tab) => (
@@ -233,58 +278,13 @@ const MyCases = () => {
           </div>
         ) : (
           <>
-            <div className="mx-5 bg-white rounded-lg shadow-md overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Case ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Title
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Filing Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {currentCases.map((caseItem) => (
-                    <tr key={caseItem.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {caseItem.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {caseItem.title}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {caseItem.type}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {caseItem.filingDate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(caseItem.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          to={`/client/case/${caseItem.id}`}
-                          className="text-green-600 hover:text-green-900 flex items-center"
-                        >
-                          <FaEye className="mr-1" />
-                          View Details
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mx-5">
+              <ResponsiveTable
+                columns={tableColumns}
+                data={currentCases}
+                emptyMessage="No cases found"
+                loading={false}
+              />
             </div>
 
             {/* Pagination */}

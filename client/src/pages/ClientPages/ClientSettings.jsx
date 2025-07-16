@@ -295,54 +295,59 @@ const ClientSettings = () => {
         position="sidebar-layout-top-right"
       />
       <ClientLayout>
-        <div className="my-4 mx-7 px-5">
-          <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
-          <p className="text-gray-600 font-light">
+        <div className="my-4 mx-4 md:mx-7 px-3 md:px-5">
+          <h1 className="text-lg md:text-xl font-semibold text-gray-800">
+            Settings
+          </h1>
+          <p className="text-gray-600 font-light text-sm md:text-base">
             Manage your account settings and preferences
           </p>
         </div>
 
-        <div className="mx-7 mb-5 py-3 bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-2 flex border-b mb-6 mx-5 w-[475px] rounded-lg shadow-md bg-tertiary bg-opacity-15">
-            <nav className="flex">
+        <div className="mx-4 md:mx-7 mb-5 py-3 bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="p-2 flex border-b mb-4 md:mb-6 mx-3 md:mx-5 max-w-full md:w-[475px] rounded-lg shadow-md bg-tertiary bg-opacity-15 overflow-x-auto">
+            <nav className="flex min-w-full md:min-w-0">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex flex-row gap-2 items-center py-3 px-8 text-center font-medium transition-all  ${
+                  className={`flex flex-row gap-1 md:gap-2 items-center py-2 md:py-3 px-4 md:px-8 text-center font-medium transition-all text-sm md:text-base whitespace-nowrap ${
                     activeTab === tab.id
                       ? "bg-white rounded-lg"
                       : "border-transparent text-gray-500"
                   }`}
                 >
-                  {tab.icon}
-                  <span>{tab.name}</span>
+                  <span className="text-sm md:text-base">{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.name}</span>
                 </button>
               ))}
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {activeTab === "profile" && (
               <div>
-                <h2 className="text-lg font-medium mb-4">
+                <h2 className="text-base md:text-lg font-medium mb-4">
                   Profile Information
                 </h2>
-                <form onSubmit={handleProfileUpdate} className="space-y-6">
+                <form
+                  onSubmit={handleProfileUpdate}
+                  className="space-y-4 md:space-y-6"
+                >
                   {/* Profile Picture Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Profile Picture
                     </label>
-                    <div className="flex items-center space-x-4">
-                      <div className="relative">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className="relative flex-shrink-0">
                         <img
                           src={
                             profilePicture ||
                             "https://via.placeholder.com/100x100?text=Admin"
                           }
                           alt="Profile"
-                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                          className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-2 border-gray-200 mx-auto sm:mx-0"
                         />
                         {uploadLoading && (
                           <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
@@ -350,12 +355,12 @@ const ClientSettings = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col space-y-2">
+                      <div className="flex flex-col space-y-2 w-full sm:w-auto">
                         <button
                           type="button"
                           onClick={handleProfilePictureClick}
                           disabled={uploadLoading}
-                          className="bg-tertiary text-white px-4 py-2 rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                          className="w-full sm:w-auto bg-tertiary text-white px-4 py-2 rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm md:text-base"
                         >
                           <FaCamera />
                           <span>
@@ -367,7 +372,7 @@ const ClientSettings = () => {
                             type="button"
                             onClick={handleRemoveProfilePicture}
                             disabled={uploadLoading}
-                            className="px-4 py-2 bg-red-600 text-white text-sm rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                            className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white text-sm rounded-md shadow hover:scale-95 ease-in-out duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                           >
                             <FaTrash />
                             <span>Remove Picture</span>
@@ -402,7 +407,7 @@ const ClientSettings = () => {
                           username: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                   <div>
@@ -418,7 +423,7 @@ const ClientSettings = () => {
                           email: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-green-500"
                     />
                   </div>
                   <div>
@@ -429,14 +434,14 @@ const ClientSettings = () => {
                       type="text"
                       value={profileData.role}
                       disabled
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 bg-gray-100 text-gray-500"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 bg-gray-100 text-gray-500 text-sm md:text-base"
                     />
                   </div>
                   <LoadingButton
                     type="submit"
                     loading={loading}
                     loadingText="Saving..."
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300"
+                    className="w-full md:w-auto bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 text-sm md:text-base font-medium"
                   >
                     <FaSave className="mr-2" />
                     Save Changes
@@ -447,8 +452,13 @@ const ClientSettings = () => {
 
             {activeTab === "password" && (
               <div>
-                <h2 className="text-lg font-medium mb-4">Change Password</h2>
-                <form onSubmit={handlePasswordChange} className="space-y-4">
+                <h2 className="text-base md:text-lg font-medium mb-4">
+                  Change Password
+                </h2>
+                <form
+                  onSubmit={handlePasswordChange}
+                  className="space-y-4 md:space-y-6"
+                >
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Current Password
@@ -462,7 +472,7 @@ const ClientSettings = () => {
                           currentPassword: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
                   </div>
                   <div>
@@ -478,7 +488,7 @@ const ClientSettings = () => {
                           newPassword: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
                   </div>
                   <div>
@@ -494,14 +504,14 @@ const ClientSettings = () => {
                           confirmPassword: e.target.value,
                         })
                       }
-                      className="w-full border border-gray-300 rounded-md px-4 py-4 focus:outline-none focus:ring-1 focus:ring-tertiary"
+                      className="w-full border border-gray-300 rounded-md px-3 md:px-4 py-3 md:py-4 text-sm md:text-base focus:outline-none focus:ring-1 focus:ring-tertiary"
                     />
                   </div>
                   <LoadingButton
                     type="submit"
                     loading={loading}
                     loadingText="Changing..."
-                    className="bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300"
+                    className="w-full md:w-auto bg-tertiary text-white px-4 py-2 rounded-md shadow-400 hover:scale-95 ease-in-out duration-300 text-sm md:text-base font-medium"
                   >
                     <FaSave className="mr-2" />
                     Change Password
@@ -512,20 +522,22 @@ const ClientSettings = () => {
 
             {activeTab === "account" && (
               <div>
-                <h2 className="text-lg font-medium mb-4">Account Management</h2>
-                <div className="space-y-6">
+                <h2 className="text-base md:text-lg font-medium mb-4">
+                  Account Management
+                </h2>
+                <div className="space-y-4 md:space-y-6">
                   {/* Danger Zone */}
-                  <div className="border border-red-200 rounded-lg p-4 bg-red-50">
-                    <h3 className="text-lg font-medium text-red-800 mb-2">
+                  <div className="border border-red-200 rounded-lg p-3 md:p-4 bg-red-50">
+                    <h3 className="text-base md:text-lg font-medium text-red-800 mb-2">
                       Danger Zone
                     </h3>
-                    <p className="text-red-700 mb-4">
+                    <p className="text-red-700 mb-3 md:mb-4 text-sm md:text-base">
                       Once you delete your account, there is no going back.
                       Please be certain.
                     </p>
                     <button
                       onClick={() => setShowDeleteModal(true)}
-                      className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 ease-in-out duration-300 flex items-center"
+                      className="w-full md:w-auto bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 ease-in-out duration-300 flex items-center justify-center text-sm md:text-base font-medium"
                     >
                       <FaTrash className="mr-2" />
                       Delete Account

@@ -128,20 +128,14 @@ const Signup = () => {
         const status = err.response.status;
         const errorData = err.response.data;
 
-        console.log("Status:", status);
-        console.log("Error data:", errorData);
-        console.log("Error message:", errorData.error || errorData.message);
-
         switch (status) {
           case 400: {
             const errorMessage = errorData.error || errorData.message || "";
-            console.log("Checking error message:", errorMessage);
 
             if (
               errorMessage.includes("User already exists") ||
               errorMessage.includes("already exists")
             ) {
-              console.log("User already exists detected!");
               setSubmitError(
                 `An account with the email "${form.email}" already exists. Please use a different email address or sign in to your existing account.`
               );
