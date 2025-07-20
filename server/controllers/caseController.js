@@ -83,8 +83,12 @@ const checkForDuplicates = async (userId, caseData) => {
         matchingFactors.push("Same case type");
       }
 
-      // Check court match
-      if (caseData.court === existingCase.court) {
+      // Check court match (only if both cases have court assigned)
+      if (
+        caseData.court &&
+        existingCase.court &&
+        caseData.court === existingCase.court
+      ) {
         similarityScore += 0.05;
         matchingFactors.push("Same court");
       }
@@ -173,7 +177,7 @@ const fileCase = asyncHandler(async (req, res) => {
     defendant,
     plaintiff,
     caseType,
-    court,
+    court, // Optional field - can be assigned later by admin
     reportDate,
     evidence,
     // Phase 1 - Essential Fields
@@ -282,7 +286,7 @@ const fileCase = asyncHandler(async (req, res) => {
             }
           : undefined,
       caseType: caseType || "",
-      court: court || "",
+      court: court || null, // Court can be assigned later by admin
       reportDate: reportDate || null,
       evidence: evidence || "",
       // Phase 1 - Essential Fields
@@ -377,7 +381,10 @@ const assignCase = asyncHandler(async (req, res) => {
 
     const updatedCase = await Case.findByIdAndUpdate(
       caseId,
-      { judge: judgeId },
+      {
+        judge: judgeId,
+        status: "In Progress", // Automatically set status to "In Progress" when judge is assigned
+      },
       { new: true }
     ).populate("client judge courtRef");
 
@@ -385,12 +392,16 @@ const assignCase = asyncHandler(async (req, res) => {
       return res.status(404).json({ error: "Case not found" });
     }
 
+    console.log(
+      `Case ${caseId} assigned to judge ${judgeId} and status updated to "In Progress"`
+    );
+
     // Create notification for case assignment
     try {
       await Notification.create({
         user: updatedCase.client._id,
-        title: "Judge Assigned to Your Case",
-        message: `Judge ${updatedCase.judge.username} has been assigned to your case "${updatedCase.title}". Your case will now be reviewed.`,
+        title: "Judge Assigned - Case In Progress",
+        message: `Judge ${updatedCase.judge.username} has been assigned to your case "${updatedCase.title}". Your case status has been updated to "In Progress" and will now be reviewed.`,
         type: "case_update",
       });
     } catch (notificationError) {

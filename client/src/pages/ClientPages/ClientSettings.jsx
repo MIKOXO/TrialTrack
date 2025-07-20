@@ -216,6 +216,8 @@ const ClientSettings = () => {
 
       // Dispatch custom event to update navbar in real-time
       window.dispatchEvent(new CustomEvent("userUpdated"));
+      // Also dispatch event to refresh admin users list
+      window.dispatchEvent(new CustomEvent("profilePictureUpdated"));
 
       showSuccess("Profile picture updated successfully!");
     } catch (error) {

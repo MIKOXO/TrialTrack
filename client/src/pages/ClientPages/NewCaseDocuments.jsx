@@ -18,6 +18,7 @@ const NewCaseDocuments = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(4);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Get form data from location state or redirect to first step
   const [formData, setFormData] = useState(
@@ -80,6 +81,7 @@ const NewCaseDocuments = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [dragActive, setDragActive] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
 
   // Duplicate detection state
   const [duplicateWarning, setDuplicateWarning] = useState(null);
@@ -93,6 +95,14 @@ const NewCaseDocuments = () => {
       navigate("/client/newcase");
     }
   }, [location.state, navigate]);
+
+  // Get current user information
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const validateFile = (file) => {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -272,6 +282,48 @@ const NewCaseDocuments = () => {
       const response = await casesAPI.fileCase(caseData);
 
       if (response.status === 201) {
+        const createdCase = response.data;
+        const caseId = createdCase._id || createdCase.id;
+        console.log("Case created successfully:", { caseId, createdCase });
+
+        // Upload documents if any were selected
+        if (documents.length > 0 && caseId) {
+          try {
+            setUploadingDocuments(true);
+            console.log(
+              `Uploading ${documents.length} documents for case ${caseId}`
+            );
+            const formData = new FormData();
+            documents.forEach((doc, index) => {
+              console.log(`Adding document ${index + 1}: ${doc.name}`);
+              formData.append("documents", doc.file);
+            });
+
+            const uploadResponse = await documentsAPI.uploadDocuments(
+              caseId,
+              formData
+            );
+            console.log(
+              "Documents uploaded successfully:",
+              uploadResponse.data
+            );
+
+            // Mark documents as uploaded
+            setDocuments((prev) =>
+              prev.map((doc) => ({ ...doc, uploaded: true }))
+            );
+          } catch (uploadError) {
+            console.error("Error uploading documents:", uploadError);
+            console.error("Upload error details:", uploadError.response?.data);
+            // Don't fail the entire case filing if document upload fails
+            setSubmitError(
+              "Case filed successfully, but there was an error uploading documents. You can upload them later from the case details page."
+            );
+          } finally {
+            setUploadingDocuments(false);
+          }
+        }
+
         setLoading(false);
         setSubmitSuccess(true);
 
@@ -328,6 +380,26 @@ const NewCaseDocuments = () => {
     if (!compliance.electronicSignature.trim()) {
       setSubmitError("Electronic signature is required.");
       return;
+    }
+
+    // Validate electronic signature matches user's name
+    if (currentUser) {
+      const userFullName =
+        `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() ||
+        currentUser.username;
+      const signatureName = compliance.electronicSignature.trim();
+
+      // Check if signature matches user's full name or username (case-insensitive)
+      const isValidSignature =
+        signatureName.toLowerCase() === userFullName.toLowerCase() ||
+        signatureName.toLowerCase() === currentUser.username.toLowerCase();
+
+      if (!isValidSignature) {
+        setSubmitError(
+          `Electronic signature must match your registered name. Please enter "${userFullName}" or "${currentUser.username}".`
+        );
+        return;
+      }
     }
 
     // Clear any previous errors
@@ -696,12 +768,30 @@ const NewCaseDocuments = () => {
                       }))
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500"
-                    placeholder="Type your full name as electronic signature"
+                    placeholder={
+                      currentUser
+                        ? `Enter "${
+                            `${currentUser.firstName || ""} ${
+                              currentUser.lastName || ""
+                            }`.trim() || currentUser.username
+                          }" or "${currentUser.username}"`
+                        : "Type your full name as electronic signature"
+                    }
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    By typing your name, you are providing your electronic
-                    signature for this filing.
+                    {currentUser ? (
+                      <>
+                        Electronic signature must match your registered name: "
+                        {`${currentUser.firstName || ""} ${
+                          currentUser.lastName || ""
+                        }`.trim() || currentUser.username}
+                        " or "{currentUser.username}". By typing your name, you
+                        are providing your electronic signature for this filing.
+                      </>
+                    ) : (
+                      "By typing your name, you are providing your electronic signature for this filing."
+                    )}
                   </p>
                 </div>
               </div>
@@ -768,10 +858,12 @@ const NewCaseDocuments = () => {
               </button>
               <LoadingButton
                 type="submit"
-                loading={loading || checkingDuplicates}
+                loading={loading || checkingDuplicates || uploadingDocuments}
                 loadingText={
                   checkingDuplicates
                     ? "Checking for duplicates..."
+                    : uploadingDocuments
+                    ? `Uploading ${documents.length} document(s)...`
                     : "Filing Case..."
                 }
                 disabled={submitSuccess}

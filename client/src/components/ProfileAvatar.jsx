@@ -44,13 +44,27 @@ const ProfileAvatar = ({
   const getProfilePictureUrl = () => {
     if (!user?.profilePicture || imageError) return null;
 
-    // If it's already a full URL, use it as is
-    if (user.profilePicture.startsWith("http")) {
-      return user.profilePicture;
+    // Handle new profile picture structure (object with url property)
+    if (typeof user.profilePicture === "object" && user.profilePicture.url) {
+      // If it's already a full URL, use it as is
+      if (user.profilePicture.url.startsWith("http")) {
+        return user.profilePicture.url;
+      }
+      // Otherwise, construct the full URL
+      return `http://localhost:3001${user.profilePicture.url}`;
     }
 
-    // Otherwise, construct the URL from the backend
-    return `http://localhost:3001/uploads/${user.profilePicture}`;
+    // Handle legacy profile picture structure (string path)
+    if (typeof user.profilePicture === "string") {
+      // If it's already a full URL, use it as is
+      if (user.profilePicture.startsWith("http")) {
+        return user.profilePicture;
+      }
+      // Otherwise, construct the URL from the backend
+      return `http://localhost:3001/uploads/${user.profilePicture}`;
+    }
+
+    return null;
   };
 
   const profilePictureUrl = getProfilePictureUrl();

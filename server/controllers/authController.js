@@ -2,8 +2,6 @@ import asyncHandler from "express-async-handler";
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import fs from "fs";
-import path from "path";
 import {
   validatePasswordStrength,
   formatPasswordErrors,
@@ -125,7 +123,13 @@ const loginUser = asyncHandler(async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        profilePicture: user.profilePicture,
+        profilePicture:
+          user.profilePicture && user.profilePicture.data
+            ? {
+                contentType: user.profilePicture.contentType,
+                url: `/api/auth/profile-picture/${user._id}`,
+              }
+            : null,
         firstName: user.firstName,
         lastName: user.lastName,
       },
@@ -146,17 +150,22 @@ const logoutUser = asyncHandler(async (req, res) => {
 // @route   GET api/auth/me
 // @access  Private
 const getMe = asyncHandler(async (req, res) => {
-  const { _id, username, email, role, profilePicture, firstName, lastName } =
-    await User.findById(req.user.id);
+  const user = await User.findById(req.user.id);
 
   res.status(200).json({
-    id: _id,
-    username,
-    email,
-    role,
-    profilePicture,
-    firstName,
-    lastName,
+    id: user._id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    profilePicture:
+      user.profilePicture && user.profilePicture.data
+        ? {
+            contentType: user.profilePicture.contentType,
+            url: `/api/auth/profile-picture/${user._id}`,
+          }
+        : null,
+    firstName: user.firstName,
+    lastName: user.lastName,
   });
 });
 
@@ -171,7 +180,19 @@ const getUsers = asyncHandler(async (req, res) => {
 
   if (!users) return res.status(404).json({ error: "No users found" });
 
-  res.json(users);
+  // Transform users data to include proper profile picture structure
+  const transformedUsers = users.map((user) => ({
+    ...user.toObject(),
+    profilePicture:
+      user.profilePicture && user.profilePicture.data
+        ? {
+            contentType: user.profilePicture.contentType,
+            url: `/api/auth/profile-picture/${user._id}`,
+          }
+        : null,
+  }));
+
+  res.json(transformedUsers);
 });
 
 // @desc    Update user profile
@@ -269,24 +290,14 @@ const uploadProfilePicture = asyncHandler(async (req, res) => {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    // Delete old profile picture if it exists
-    if (user.profilePicture) {
-      const oldImagePath = path.join(
-        process.cwd(),
-        "uploads",
-        user.profilePicture
-      );
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
-    }
-
-    // Update user with new profile picture path
-    const profilePicturePath = req.file.filename;
+    // Update user with new profile picture data
     const updatedUser = await User.findByIdAndUpdate(
       id,
       {
-        profilePicture: profilePicturePath,
+        profilePicture: {
+          data: req.file.buffer,
+          contentType: req.file.mimetype,
+        },
         updatedAt: new Date(),
       },
       { new: true, runValidators: true }
@@ -294,9 +305,36 @@ const uploadProfilePicture = asyncHandler(async (req, res) => {
 
     res.json({
       message: "Profile picture uploaded successfully",
-      user: updatedUser,
-      profilePictureUrl: `/uploads/${profilePicturePath}`,
+      user: {
+        ...updatedUser.toObject(),
+        profilePicture: updatedUser.profilePicture
+          ? {
+              contentType: updatedUser.profilePicture.contentType,
+              hasData: !!updatedUser.profilePicture.data,
+            }
+          : null,
+      },
     });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// @desc    Get profile picture
+// @route   GET api/auth/profile-picture/:id
+// @access  Public
+const getProfilePicture = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select("profilePicture");
+    if (!user || !user.profilePicture || !user.profilePicture.data) {
+      return res.status(404).json({ error: "Profile picture not found" });
+    }
+
+    res.setHeader("Content-Type", user.profilePicture.contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+    res.send(user.profilePicture.data);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -463,6 +501,7 @@ export {
   getMe,
   updateUserProfile,
   uploadProfilePicture,
+  getProfilePicture,
   deleteUserProfile,
   getUsers,
   createJudge,

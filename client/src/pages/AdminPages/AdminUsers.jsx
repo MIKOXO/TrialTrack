@@ -84,6 +84,23 @@ const AdminUsers = () => {
 
   useEffect(() => {
     fetchUsers();
+
+    // Listen for profile picture updates
+    const handleProfilePictureUpdate = () => {
+      fetchUsers();
+    };
+
+    window.addEventListener(
+      "profilePictureUpdated",
+      handleProfilePictureUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profilePictureUpdated",
+        handleProfilePictureUpdate
+      );
+    };
   }, []);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
@@ -141,6 +158,17 @@ const AdminUsers = () => {
     const currentUser = JSON.parse(localStorage.getItem("user"));
     if (selectedUser.id === currentUser._id) {
       showError("You cannot delete your own account");
+      setShowDeleteModal(false);
+      return;
+    }
+
+    // Prevent deletion of the last admin
+    const adminCount = users.filter((user) => user.role === "Admin").length;
+    if (selectedUser.role === "Admin" && adminCount === 1) {
+      showError(
+        "Cannot delete the last admin account. At least one admin must remain in the system."
+      );
+      setShowDeleteModal(false);
       return;
     }
 
@@ -217,23 +245,46 @@ const AdminUsers = () => {
       key: "actions",
       header: "Actions",
       mobileLabel: "Actions",
-      render: (value, row) => (
-        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
-          <button
-            className="bg-green-100 text-green-800 px-3 py-1 rounded-md hover:bg-green-200 flex items-center justify-center space-x-1"
-            onClick={() => openUserDetailsModal(row)}
-          >
-            <FaEye />
-            <span>View</span>
-          </button>
-          <button
-            className="bg-red-100 text-red-800 px-3 py-1 rounded-md hover:bg-red-200"
-            onClick={() => openDeleteModal(row)}
-          >
-            Delete
-          </button>
-        </div>
-      ),
+      render: (value, row) => {
+        // Get current user to check if they're trying to delete their own account
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const isCurrentUser = row.id === currentUser._id;
+        const isLastAdmin =
+          row.role === "Admin" &&
+          users.filter((user) => user.role === "Admin").length === 1;
+        const shouldDisableDelete = isCurrentUser || isLastAdmin;
+
+        return (
+          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+            <button
+              className="bg-green-100 text-green-800 px-3 py-1 rounded-md hover:bg-green-200 flex items-center justify-center space-x-1"
+              onClick={() => openUserDetailsModal(row)}
+            >
+              <FaEye />
+              <span>View</span>
+            </button>
+            <button
+              className={`px-3 py-1 rounded-md flex items-center justify-center space-x-1 ${
+                shouldDisableDelete
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-red-100 text-red-800 hover:bg-red-200"
+              }`}
+              onClick={() => !shouldDisableDelete && openDeleteModal(row)}
+              disabled={shouldDisableDelete}
+              title={
+                isCurrentUser
+                  ? "You cannot delete your own account"
+                  : isLastAdmin
+                  ? "Cannot delete the last admin account"
+                  : "Delete user"
+              }
+            >
+              <FaTrash />
+              <span>Delete</span>
+            </button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -1105,9 +1156,25 @@ const UserDetailsModal = ({ user, onClose }) => {
                 <label className="block text-sm font-medium text-gray-700">
                   Profile Picture
                 </label>
-                <p className="mt-1 text-sm text-gray-900">
-                  {user.profilePicture ? "Uploaded" : "Not uploaded"}
-                </p>
+                <div className="mt-2">
+                  <ProfileAvatar
+                    user={{
+                      username: user.name,
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      role: user.role,
+                      email: user.email,
+                      profilePicture: user.profilePicture,
+                    }}
+                    size="xl"
+                    showName={false}
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    {user.profilePicture
+                      ? "Profile picture uploaded"
+                      : "No profile picture"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

@@ -1,22 +1,42 @@
 import mongoose from "mongoose";
 
 const reportSchema = new mongoose.Schema({
-  // case: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "Case",
-  //   required: true,
-  // },
   title: {
     type: String,
     required: true,
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: [
+      "System Performance",
+      "Case Management",
+      "User Activity",
+      "Security Audit",
+      "Financial Summary",
+      "Operational Issues",
+    ],
+  },
+  priority: {
+    type: String,
+    required: true,
+    enum: ["Low", "Medium", "High", "Critical"],
+  },
+  department: {
+    type: String,
+    required: true,
+    enum: ["Administration", "IT Support", "Legal Affairs", "Operations"],
   },
   description: {
     type: String,
     required: true,
   },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
   data: {
     type: Object,
-    // required: true,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

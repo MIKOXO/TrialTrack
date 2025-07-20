@@ -3,6 +3,7 @@ import Court from "../models/courtModel.js";
 import Hearing from "../models/hearingModel.js";
 import Notification from "../models/notificationModel.js";
 import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 
 // Helper function to check for hearing conflicts
 const checkHearingConflict = async (
@@ -422,6 +423,30 @@ const getAvailableTimeSlots = asyncHandler(async (req, res) => {
   try {
     const { courtId, date } = req.params;
 
+    console.log("getAvailableTimeSlots called with:", {
+      courtId,
+      date,
+      userRole: req.user.role,
+    });
+
+    // Validate parameters
+    if (!courtId || !date) {
+      return res.status(400).json({ error: "Court ID and date are required" });
+    }
+
+    // Validate courtId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(courtId)) {
+      return res.status(400).json({ error: "Invalid court ID format" });
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+      return res
+        .status(400)
+        .json({ error: "Invalid date format. Use YYYY-MM-DD" });
+    }
+
     // Verify Judge role
     if (req.user.role !== "Judge") {
       return res
@@ -430,7 +455,9 @@ const getAvailableTimeSlots = asyncHandler(async (req, res) => {
     }
 
     // Validate court exists
+    console.log("Looking for court with ID:", courtId);
     const court = await Court.findById(courtId);
+    console.log("Found court:", court);
     if (!court) {
       return res.status(404).json({ error: "Court not found" });
     }
@@ -457,12 +484,23 @@ const getAvailableTimeSlots = asyncHandler(async (req, res) => {
     ];
 
     // Get existing hearings for the date
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
+    console.log("Processing date:", date);
 
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Parse date more carefully
+    const inputDate = new Date(date + "T00:00:00.000Z"); // Ensure UTC
+    if (isNaN(inputDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date provided" });
+    }
 
+    const startOfDay = new Date(inputDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(inputDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
+    console.log("Date range:", { startOfDay, endOfDay, inputDate });
+
+    console.log("Querying hearings for court:", courtId);
     const existingHearings = await Hearing.find({
       court: courtId,
       date: {
@@ -472,6 +510,8 @@ const getAvailableTimeSlots = asyncHandler(async (req, res) => {
     })
       .populate("case", "title")
       .populate("judge", "username");
+
+    console.log("Found existing hearings:", existingHearings.length);
 
     // Get booked time slots
     const bookedSlots = existingHearings.map((hearing) => hearing.time);
@@ -502,7 +542,8 @@ const getAvailableTimeSlots = asyncHandler(async (req, res) => {
       bookedCount: bookedSlots.length,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error in getAvailableTimeSlots:", err);
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 

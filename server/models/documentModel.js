@@ -41,12 +41,8 @@ const documentSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    fileUrl: {
-      type: String,
-      required: true,
-    },
-    filePath: {
-      type: String,
+    fileData: {
+      type: Buffer,
       required: true,
     },
     description: {

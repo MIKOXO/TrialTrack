@@ -21,8 +21,14 @@ const userSchema = new mongoose.Schema({
     required: true,
   },
   profilePicture: {
-    type: String,
-    default: null,
+    data: {
+      type: Buffer,
+      default: null,
+    },
+    contentType: {
+      type: String,
+      default: null,
+    },
   },
   firstName: {
     type: String,

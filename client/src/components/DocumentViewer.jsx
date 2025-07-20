@@ -5,10 +5,8 @@ import Spinner from "./Spinner";
 import {
   FaFile,
   FaDownload,
-  FaEye,
   FaTrash,
   FaSpinner,
-  FaTimes,
   FaFilePdf,
   FaFileWord,
   FaFileImage,
@@ -19,8 +17,7 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [viewerOpen, setViewerOpen] = useState(false);
+
   const [deleteLoading, setDeleteLoading] = useState(null);
 
   useEffect(() => {
@@ -72,47 +69,38 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
     });
   };
 
-  const handleView = async (document) => {
-    try {
-      const response = await documentsAPI.viewDocument(caseId, document.name);
-      const blob = new Blob([response.data], { type: document.mimeType });
-      const url = URL.createObjectURL(blob);
-
-      if (
-        document.mimeType === "application/pdf" ||
-        document.mimeType.startsWith("image/")
-      ) {
-        setSelectedDocument({ ...document, url });
-        setViewerOpen(true);
-      } else {
-        // For other file types, open in new tab
-        window.open(url, "_blank");
-      }
-    } catch (err) {
-      console.error("Error viewing document:", err);
-      setError("Failed to view document");
-    }
-  };
-
   const handleDownload = async (document) => {
     try {
+      console.log("Attempting to download document:", {
+        caseId,
+        documentName: document.name,
+        originalName: document.originalName,
+      });
+
       const response = await documentsAPI.downloadDocument(
         caseId,
         document.name
       );
+      console.log("Download document response:", response);
+
       const blob = new Blob([response.data], { type: document.mimeType });
       const url = URL.createObjectURL(blob);
 
-      const link = document.createElement("a");
+      const link = window.document.createElement("a");
       link.href = url;
       link.download = document.originalName;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Error downloading document:", err);
-      setError("Failed to download document");
+      console.error("Download error details:", err.response?.data);
+      setError(
+        `Failed to download document: ${
+          err.response?.data?.error || err.message
+        }`
+      );
     }
   };
 
@@ -134,14 +122,6 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
     } finally {
       setDeleteLoading(null);
     }
-  };
-
-  const closeViewer = () => {
-    setViewerOpen(false);
-    if (selectedDocument?.url) {
-      URL.revokeObjectURL(selectedDocument.url);
-    }
-    setSelectedDocument(null);
   };
 
   if (loading) {
@@ -200,13 +180,6 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
 
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => handleView(document)}
-                className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
-                title="View Document"
-              >
-                <FaEye />
-              </button>
-              <button
                 onClick={() => handleDownload(document)}
                 className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
                 title="Download Document"
@@ -231,48 +204,6 @@ const DocumentViewer = ({ caseId, onDocumentDeleted, canDelete = false }) => {
           </div>
         ))}
       </div>
-
-      {/* Document Viewer Modal */}
-      {viewerOpen && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl max-h-full w-full h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-medium">
-                {selectedDocument.originalName}
-              </h3>
-              <button
-                onClick={closeViewer}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FaTimes className="text-xl" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {selectedDocument.mimeType === "application/pdf" ? (
-                <iframe
-                  src={selectedDocument.url}
-                  className="w-full h-full"
-                  title={selectedDocument.originalName}
-                />
-              ) : selectedDocument.mimeType.startsWith("image/") ? (
-                <div className="flex items-center justify-center h-full p-4">
-                  <img
-                    src={selectedDocument.url}
-                    alt={selectedDocument.originalName}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">
-                    Preview not available for this file type
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

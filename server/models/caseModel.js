@@ -28,6 +28,7 @@ const caseSchema = new mongoose.Schema({
   court: {
     type: String,
     enum: ["district", "high", "supreme", "family", "traffic"],
+    default: null, // Court can be assigned later by admin
   },
   reportDate: {
     type: Date,

@@ -35,7 +35,10 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
         });
 
         const activeCases = monthCases.filter(
-          (c) => c.status === "Open" || c.status === "In-progress"
+          (c) =>
+            c.status === "Open" ||
+            c.status === "In-progress" ||
+            c.status === "In Progress"
         ).length;
         const pendingCases = monthCases.filter(
           (c) => c.status === "Open"
@@ -49,34 +52,19 @@ const getDashboardAnalytics = asyncHandler(async (req, res) => {
         };
       });
 
-    // If no data exists, provide some sample data for demonstration
-    if (monthlyStats.every((stat) => stat.totalCases === 0)) {
-      for (let i = 0; i < 12; i++) {
-        monthlyStats[i] = {
-          month: i,
-          totalCases: Math.floor(Math.random() * 10) + 1,
-          activeCases: Math.floor(Math.random() * 8) + 1,
-          pendingCases: Math.floor(Math.random() * 5) + 1,
-        };
-      }
-    }
+    // Return actual data only - no mock data
 
     // Calculate case status distribution
     const allCases = await Case.find();
     let statusDistribution = {
       Open: allCases.filter((c) => c.status === "Open").length,
-      "In-progress": allCases.filter((c) => c.status === "In-progress").length,
+      "In Progress": allCases.filter(
+        (c) => c.status === "In-progress" || c.status === "In Progress"
+      ).length,
       Closed: allCases.filter((c) => c.status === "Closed").length,
     };
 
-    // If no cases exist, provide sample data
-    if (allCases.length === 0) {
-      statusDistribution = {
-        Open: Math.floor(Math.random() * 15) + 5,
-        "In-progress": Math.floor(Math.random() * 10) + 3,
-        Closed: Math.floor(Math.random() * 20) + 8,
-      };
-    }
+    // Return actual status distribution only - no mock data
 
     // Calculate urgent cases (cases filed in last 7 days that are still open)
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -146,8 +134,9 @@ const getCaseTrends = asyncHandler(async (req, res) => {
           }),
           newCases: monthCases.length,
           openCases: monthCases.filter((c) => c.status === "Open").length,
-          inProgressCases: monthCases.filter((c) => c.status === "In-progress")
-            .length,
+          inProgressCases: monthCases.filter(
+            (c) => c.status === "In-progress" || c.status === "In Progress"
+          ).length,
           closedCases: monthCases.filter((c) => c.status === "Closed").length,
         };
       });

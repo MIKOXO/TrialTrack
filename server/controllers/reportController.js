@@ -10,13 +10,18 @@ const createReport = asyncHandler(async (req, res) => {
       .status(403)
       .json({ error: "You have no authorization for this action!" });
 
-  const { title, description, data } = req.body;
+  const { title, type, priority, department, description, date, data } =
+    req.body;
 
   try {
     const report = new Report({
       title,
+      type,
+      priority,
+      department,
       description,
-      //   data,
+      date: date || new Date(),
+      data,
       createdBy: req.user._id,
     });
 

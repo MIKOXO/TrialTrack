@@ -262,39 +262,18 @@ const AdminCases = () => {
       // Create blob and download
       const blob = new Blob([response.data], { type: document.mimeType });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = window.document.createElement("a");
       link.href = url;
       link.download = document.originalName;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       showSuccess(`Downloaded ${document.originalName}`);
     } catch (error) {
       console.error("Error downloading document:", error);
       showError("Failed to download document. Please try again.");
-    }
-  };
-
-  // Handle document view
-  const handleViewDocument = async (document) => {
-    try {
-      const response = await documentsAPI.viewDocument(
-        selectedCaseForDocs.id,
-        document.name
-      );
-
-      // Create blob URL and open in new tab
-      const blob = new Blob([response.data], { type: document.mimeType });
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-
-      // Clean up the URL after a delay
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      console.error("Error viewing document:", error);
-      showError("Failed to view document. Please try again.");
     }
   };
 
@@ -1587,17 +1566,10 @@ const AdminCases = () => {
                           </div>
                         )}
 
-                        <div className="mt-4 flex space-x-2">
-                          <button
-                            onClick={() => handleViewDocument(document)}
-                            className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
-                          >
-                            <FaEye className="mr-1 w-3 h-3" />
-                            View
-                          </button>
+                        <div className="mt-4">
                           <button
                             onClick={() => handleDownloadDocument(document)}
-                            className="flex-1 flex items-center justify-center px-3 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
+                            className="w-full flex items-center justify-center px-3 py-2 text-xs font-medium text-green-600 bg-green-50 rounded-md hover:bg-green-100 transition-colors"
                           >
                             <FaDownload className="mr-1 w-3 h-3" />
                             Download

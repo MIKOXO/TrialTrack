@@ -65,8 +65,47 @@ const NewCaseLegalDetails = () => {
     }
   }, [location.state, navigate]);
 
+  // Format Ethiopian phone number
+  const formatEthiopianPhone = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "");
+
+    // Handle different input patterns
+    if (digits.startsWith("251")) {
+      // International format: +251-9XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(251)([9])(\d{2})(\d{3})(\d{3})$/,
+        "+$1-$2$3-$4-$5"
+      );
+      return formatted.length <= 17 ? formatted : value;
+    } else if (digits.startsWith("09")) {
+      // Local format: 09XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(09)(\d{2})(\d{3})(\d{3})$/,
+        "$1$2-$3-$4"
+      );
+      return formatted.length <= 13 ? formatted : value;
+    } else if (digits.startsWith("9") && digits.length <= 9) {
+      // Format as 9XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(9)(\d{2})(\d{3})(\d{3})$/,
+        "$1$2-$3-$4"
+      );
+      return formatted.length <= 11 ? formatted : value;
+    }
+
+    return digits.length <= 13 ? digits : value;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    let processedValue = value;
+
+    // Apply Ethiopian phone formatting for lawyer phone
+    if (name === "representation.lawyerContact.phone") {
+      processedValue = formatEthiopianPhone(value);
+    }
 
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
@@ -87,7 +126,7 @@ const NewCaseLegalDetails = () => {
             ...prev.representation,
             lawyerContact: {
               ...prev.representation.lawyerContact,
-              [grandchild]: value,
+              [grandchild]: processedValue,
             },
           },
         }));
@@ -96,7 +135,7 @@ const NewCaseLegalDetails = () => {
           ...prev,
           representation: {
             ...prev.representation,
-            [child]: value,
+            [child]: processedValue,
           },
         }));
       } else if (parent === "reliefSought") {
@@ -104,14 +143,14 @@ const NewCaseLegalDetails = () => {
           ...prev,
           reliefSought: {
             ...prev.reliefSought,
-            [child]: type === "checkbox" ? checked : value,
+            [child]: type === "checkbox" ? checked : processedValue,
           },
         }));
       }
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
+        [name]: processedValue,
       }));
     }
 
@@ -142,6 +181,18 @@ const NewCaseLegalDetails = () => {
       if (!formData.representation?.lawyerContact.phone?.trim()) {
         newErrors["representation.lawyerContact.phone"] =
           "Lawyer Phone Number is Required";
+      } else {
+        // Ethiopian phone number validation for lawyer
+        const cleanPhone = formData.representation.lawyerContact.phone.replace(
+          /[\s\-()]/g,
+          ""
+        );
+        const ethiopianPhoneRegex = /^(\+251|0)?[9][0-9]{8}$/;
+
+        if (!ethiopianPhoneRegex.test(cleanPhone)) {
+          newErrors["representation.lawyerContact.phone"] =
+            "Please enter a valid Ethiopian phone number (e.g., +251-9XX-XXX-XXX or 09XX-XXX-XXX)";
+        }
       }
     }
 
@@ -403,6 +454,7 @@ const NewCaseLegalDetails = () => {
                           formData.representation?.lawyerContact?.phone || ""
                         }
                         onChange={handleChange}
+                        // placeholder="e.g., +251-912-345-678 or 0912-345-678"
                         className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
                           errors["representation.lawyerContact.phone"]
                             ? "border-red-500 focus:ring-red-500"
@@ -416,13 +468,16 @@ const NewCaseLegalDetails = () => {
                             : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                         }`}
                       >
-                        Lawyer Phone *
+                        Lawyer Phone (Ethiopian) *
                       </label>
-                      {errors["representation.lawyerBarNumber"] && (
+                      {errors["representation.lawyerContact.phone"] && (
                         <p className="text-red-500 text-sm mt-1">
                           {errors["representation.lawyerContact.phone"]}
                         </p>
                       )}
+                      <p className="text-gray-500 text-sm mt-1">
+                        Ethiopian format: +251-9XX-XXX-XXX or 09XX-XXX-XXX
+                      </p>
                     </div>
                   </div>
                 </div>

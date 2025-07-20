@@ -8,7 +8,8 @@ import CaseItem from "../../components/CaseItem";
 import QuickAction from "../../components/QuickAction";
 import HearingItem from "../../components/HearingItem";
 import { ClientPageLoader } from "../../components/PageLoader";
-import { FaPlus, FaSearch } from "react-icons/fa";
+import { hearingsAPI } from "../../services/api";
+import { FaPlus, FaSearch, FaCalendarAlt } from "react-icons/fa";
 
 const ClientHome = () => {
   const [user, setUser] = useState(null);
@@ -51,7 +52,7 @@ const ClientHome = () => {
         const totalCases = cases.length;
         const openCases = cases.filter((c) => c.status === "Open").length;
         const inProgressCases = cases.filter(
-          (c) => c.status === "In-progress"
+          (c) => c.status === "In Progress"
         ).length;
         const closedCases = cases.filter((c) => c.status === "Closed").length;
 
@@ -78,7 +79,24 @@ const ClientHome = () => {
 
         setRecentCases(recentCasesData);
 
-        setUpcomingHearings([]);
+        // Fetch upcoming hearings for the client
+        try {
+          const hearingsResponse = await hearingsAPI.getClientHearings();
+          console.log("Fetched hearings:", hearingsResponse.data);
+          const hearingsData = hearingsResponse.data.map((hearing) => ({
+            id: hearing._id,
+            title: hearing.case.title,
+            date: new Date(hearing.date).toLocaleDateString(),
+            time: hearing.time,
+            court: hearing.court?.name || "TBD",
+            judge: hearing.judge?.username || "TBD",
+          }));
+          setUpcomingHearings(hearingsData);
+        } catch (hearingError) {
+          console.error("Error fetching hearings:", hearingError);
+          // Don't fail the entire page if hearings fail to load
+          setUpcomingHearings([]);
+        }
 
         setLoading(false);
       } catch (err) {
@@ -217,6 +235,11 @@ const ClientHome = () => {
         <div>
           <h2 className="text-base md:text-lg font-medium mb-4">
             Upcoming Hearings
+            {upcomingHearings.length > 0 && (
+              <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                {upcomingHearings.length}
+              </span>
+            )}
           </h2>
           <div className="space-y-4 md:space-y-7 bg-white rounded-lg shadow-lg overflow-hidden">
             {upcomingHearings.length > 0 ? (
@@ -225,12 +248,19 @@ const ClientHome = () => {
                   key={hearing.id}
                   title={hearing.title}
                   date={hearing.date}
+                  time={hearing.time}
+                  court={hearing.court}
+                  judge={hearing.judge}
                 />
               ))
             ) : (
               <div className="p-4 md:p-6 text-center text-gray-500">
-                <p className="text-sm md:text-base">
-                  No upcoming hearings scheduled.
+                <FaCalendarAlt className="mx-auto text-2xl md:text-3xl mb-2 text-gray-400" />
+                <p className="text-sm md:text-base font-medium mb-1">
+                  No upcoming hearings scheduled
+                </p>
+                <p className="text-xs md:text-sm text-gray-400">
+                  Your hearings will appear here when scheduled by the judge
                 </p>
               </div>
             )}

@@ -36,8 +36,47 @@ const NewCaseParties = () => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Format Ethiopian phone number
+  const formatEthiopianPhone = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "");
+
+    // Handle different input patterns
+    if (digits.startsWith("251")) {
+      // International format: +251-9XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(251)([9])(\d{2})(\d{3})(\d{3})$/,
+        "+$1-$2$3-$4-$5"
+      );
+      return formatted.length <= 17 ? formatted : value;
+    } else if (digits.startsWith("09")) {
+      // Local format: 09XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(09)(\d{2})(\d{3})(\d{3})$/,
+        "$1$2-$3-$4"
+      );
+      return formatted.length <= 13 ? formatted : value;
+    } else if (digits.startsWith("9") && digits.length <= 9) {
+      // Format as 9XX-XXX-XXX
+      const formatted = digits.replace(
+        /^(9)(\d{2})(\d{3})(\d{3})$/,
+        "$1$2-$3-$4"
+      );
+      return formatted.length <= 11 ? formatted : value;
+    }
+
+    return digits.length <= 13 ? digits : value;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    let processedValue = value;
+
+    // Apply Ethiopian phone formatting for defendant phone
+    if (name === "defendant.phone") {
+      processedValue = formatEthiopianPhone(value);
+    }
 
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
@@ -45,13 +84,13 @@ const NewCaseParties = () => {
         ...formData,
         [parent]: {
           ...formData[parent],
-          [child]: value,
+          [child]: processedValue,
         },
       });
     } else {
       setFormData({
         ...formData,
-        [name]: value,
+        [name]: processedValue,
       });
     }
 
@@ -77,12 +116,15 @@ const NewCaseParties = () => {
 
     if (!formData.defendant.phone.trim()) {
       newErrors["defendant.phone"] = "Defendant phone number is required";
-    } else if (
-      !/^[\+]?[1-9][\d]{0,15}$/.test(
-        formData.defendant.phone.replace(/[\s\-\(\)]/g, "")
-      )
-    ) {
-      newErrors["defendant.phone"] = "Please enter a valid phone number";
+    } else {
+      // Ethiopian phone number validation
+      const cleanPhone = formData.defendant.phone.replace(/[\s\-\(\)]/g, "");
+      const ethiopianPhoneRegex = /^(\+251|0)?[9][0-9]{8}$/;
+
+      if (!ethiopianPhoneRegex.test(cleanPhone)) {
+        newErrors["defendant.phone"] =
+          "Please enter a valid Ethiopian phone number (e.g., +251-9XX-XXX-XXX or 09XX-XXX-XXX)";
+      }
     }
 
     // Email validation (optional but must be valid if provided)
@@ -285,8 +327,9 @@ const NewCaseParties = () => {
                 name="defendant.phone"
                 value={formData.defendant.phone}
                 onChange={handleChange}
+                // placeholder="e.g., +251-912-345-678 or 0912-345-678"
                 className={`peer w-full border border-gray-300 rounded-lg px-6 pt-5 pb-2 focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
-                  errors.phone
+                  errors["defendant.phone"]
                     ? "border-red-500 focus:ring-red-500"
                     : "border-gray-300 focus:ring-tertiary"
                 }`}
@@ -299,7 +342,8 @@ const NewCaseParties = () => {
                     : " top-2.5 text-gray-400 peer-focus:-top-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-tertiary"
                 }`}
               >
-                Defendant Phone Number <span className="text-red-500">*</span>
+                Defendant Phone Number (Ethiopian){" "}
+                <span className="text-red-500">*</span>
               </label>
               {errors["defendant.phone"] && (
                 <p className="text-red-500 text-sm mt-1">
@@ -307,7 +351,8 @@ const NewCaseParties = () => {
                 </p>
               )}
               <p className="text-gray-500 text-sm mt-1">
-                Required for court notifications and service of process
+                Ethiopian format: +251-9XX-XXX-XXX or 09XX-XXX-XXX. Required for
+                court notifications.
               </p>
             </div>
 

@@ -6,6 +6,7 @@ import {
   registerUser,
   updateUserProfile,
   uploadProfilePicture,
+  getProfilePicture,
   deleteUserProfile,
   getUsers,
   createJudge,
@@ -27,6 +28,7 @@ router.post(
   upload.single("profilePicture"),
   uploadProfilePicture
 );
+router.get("/profile-picture/:id", getProfilePicture);
 router.delete("/delete/:id", authMiddleware, deleteUserProfile);
 router.get("/users", authMiddleware, restrictTo("Admin"), getUsers);
 router.post("/create-judge", authMiddleware, restrictTo("Admin"), createJudge);

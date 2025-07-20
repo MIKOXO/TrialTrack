@@ -1,42 +1,12 @@
 import asyncHandler from "express-async-handler";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
 import Document from "../models/documentModel.js";
 import Case from "../models/caseModel.js";
 import Notification from "../models/notificationModel.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const caseId = req.params.caseId || req.body.caseId;
-    const caseDir = path.join(uploadsDir, caseId);
-
-    // Create case-specific directory
-    if (!fs.existsSync(caseDir)) {
-      fs.mkdirSync(caseDir, { recursive: true });
-    }
-
-    cb(null, caseDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, `${name}-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer for file uploads (store in memory)
+const storage = multer.memoryStorage();
 
 // File filter for allowed file types
 const fileFilter = (req, file, cb) => {
@@ -107,24 +77,53 @@ const uploadDocuments = asyncHandler(async (req, res) => {
     const uploadedDocuments = [];
 
     for (const file of req.files) {
-      // Create document record
+      // Generate unique filename
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      const name = path.basename(file.originalname, ext);
+      const uniqueFilename = `${name}-${uniqueSuffix}${ext}`;
+
+      console.log("Processing uploaded file:", {
+        filename: uniqueFilename,
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+      });
+
+      // Create document record with file data stored in database
       const document = await Document.create({
-        name: file.filename,
+        name: uniqueFilename,
         originalName: file.originalname,
         case: caseId,
         uploadedBy: req.user.id,
         type: type || "Other",
         mimeType: file.mimetype,
         size: file.size,
-        fileUrl: `/api/documents/view/${caseId}/${file.filename}`,
-        filePath: file.path,
+        fileData: file.buffer, // Store file data as Buffer in database
         description: description || "",
+      });
+
+      console.log("Document created:", {
+        id: document._id,
+        name: document.name,
+        originalName: document.originalName,
+        size: document.size,
+        hasFileData: !!document.fileData,
       });
 
       // Add document to case
       caseDoc.documents.push(document._id);
 
-      uploadedDocuments.push(document);
+      uploadedDocuments.push({
+        _id: document._id,
+        name: document.name,
+        originalName: document.originalName,
+        type: document.type,
+        mimeType: document.mimeType,
+        size: document.size,
+        description: document.description,
+        uploadDate: document.uploadDate,
+      });
     }
 
     await caseDoc.save();
@@ -198,7 +197,28 @@ const getCaseDocuments = asyncHandler(async (req, res) => {
 const viewDocument = asyncHandler(async (req, res) => {
   try {
     const { caseId, filename } = req.params;
-    const { download } = req.query;
+    const { download, token } = req.query;
+
+    console.log("ViewDocument request:", {
+      caseId,
+      filename,
+      download,
+      hasToken: !!token,
+    });
+
+    // Handle token-based auth for direct URL access
+    if (token && !req.user) {
+      try {
+        const jwt = await import("jsonwebtoken");
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
+        const User = (await import("../models/userModel.js")).default;
+        req.user = await User.findById(decoded.id);
+        console.log("Token auth successful for user:", req.user?.email);
+      } catch (tokenError) {
+        console.log("Token auth failed:", tokenError.message);
+        return res.status(401).json({ error: "Invalid token" });
+      }
+    }
 
     // Find document
     const document = await Document.findOne({
@@ -206,7 +226,15 @@ const viewDocument = asyncHandler(async (req, res) => {
       name: filename,
     }).populate("case");
 
+    console.log("Found document:", {
+      found: !!document,
+      documentId: document?._id,
+      filePath: document?.filePath,
+      originalName: document?.originalName,
+    });
+
     if (!document) {
+      console.log("Document not found in database");
       return res.status(404).json({ error: "Document not found" });
     }
 
@@ -223,9 +251,16 @@ const viewDocument = asyncHandler(async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    // Check if file exists
-    if (!fs.existsSync(document.filePath)) {
-      return res.status(404).json({ error: "File not found on server" });
+    // Check if file data exists
+    console.log("Checking file data:", {
+      hasFileData: !!document.fileData,
+      fileSize: document.size,
+      filename: document.originalName,
+    });
+
+    if (!document.fileData) {
+      console.log("File data not found in database");
+      return res.status(404).json({ error: "File data not found" });
     }
 
     // Update access tracking
@@ -235,11 +270,20 @@ const viewDocument = asyncHandler(async (req, res) => {
     }
     await document.save();
 
-    // Set appropriate headers
-    const stat = fs.statSync(document.filePath);
+    console.log("Setting headers:", {
+      mimeType: document.mimeType,
+      size: document.size,
+      filename: document.originalName,
+      download: download === "true",
+    });
 
-    res.setHeader("Content-Type", document.mimeType);
-    res.setHeader("Content-Length", stat.size);
+    // Set appropriate headers
+    res.setHeader(
+      "Content-Type",
+      document.mimeType || "application/octet-stream"
+    );
+    res.setHeader("Content-Length", document.size);
+    res.setHeader("Accept-Ranges", "bytes");
 
     if (download === "true") {
       res.setHeader(
@@ -253,9 +297,8 @@ const viewDocument = asyncHandler(async (req, res) => {
       );
     }
 
-    // Stream the file
-    const fileStream = fs.createReadStream(document.filePath);
-    fileStream.pipe(res);
+    // Send the file data directly from database
+    res.send(document.fileData);
   } catch (error) {
     console.error("Error viewing document:", error);
     res.status(500).json({ error: "Failed to access document" });
@@ -283,10 +326,7 @@ const deleteDocument = asyncHandler(async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    // Delete file from filesystem
-    if (fs.existsSync(document.filePath)) {
-      fs.unlinkSync(document.filePath);
-    }
+    // File data is stored in database, no filesystem cleanup needed
 
     // Remove document from case
     await Case.findByIdAndUpdate(document.case._id, {

@@ -12,6 +12,7 @@ const JudgeLayout = ({ children }) => {
     return false;
   });
   const [user, setUser] = useState(null);
+  const [userUpdateTrigger, setUserUpdateTrigger] = useState(0);
 
   useEffect(() => {
     const loadUser = () => {
@@ -35,7 +36,11 @@ const JudgeLayout = ({ children }) => {
 
     // Also listen for custom events for same-tab updates
     const handleUserUpdate = () => {
+      console.log(
+        "JudgeLayout: userUpdated event received, reloading user data"
+      );
       loadUser();
+      setUserUpdateTrigger((prev) => prev + 1); // Force re-render
     };
 
     window.addEventListener("userUpdated", handleUserUpdate);

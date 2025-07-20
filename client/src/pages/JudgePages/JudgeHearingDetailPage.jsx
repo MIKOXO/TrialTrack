@@ -377,7 +377,7 @@ const JudgeHearingDetailPage = () => {
                       </div>
                     </div>
                     <button className="text-green-600 hover:text-green-700 text-xs md:text-sm self-start sm:self-auto flex-shrink-0">
-                      View
+                      Download
                     </button>
                   </div>
                 ))}

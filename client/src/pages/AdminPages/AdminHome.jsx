@@ -11,6 +11,7 @@ import {
   FaUserPlus,
   FaPlus,
   FaChartBar,
+  FaChartPie,
   FaExclamationCircle,
   FaClock,
   FaMapMarkerAlt,
@@ -230,8 +231,8 @@ const AdminHome = () => {
 
         // Fetch analytics data
         let analytics = {
-          monthlyStats: Array(12).fill({ activeCases: 0, pendingCases: 0 }),
-          statusDistribution: { Open: 0, "In-progress": 0, Closed: 0 },
+          monthlyStats: [],
+          statusDistribution: {},
           totalCases: 0,
           totalUsers: 0,
           urgentCases: 0,
@@ -261,17 +262,75 @@ const AdminHome = () => {
           // Silently handle hearing fetch errors
         }
 
-        // Set chart data from analytics
+        // Calculate status distribution from actual case data if analytics is empty
+        let statusDistribution = analytics.statusDistribution;
+
+        // If analytics doesn't have status distribution or it's empty, calculate from cases
+        if (
+          !statusDistribution ||
+          Object.keys(statusDistribution).length === 0 ||
+          Object.values(statusDistribution).every((val) => val === 0)
+        ) {
+          statusDistribution = {
+            Open: cases.filter((c) => c.status === "Open").length,
+            "In Progress": cases.filter(
+              (c) => c.status === "In-progress" || c.status === "In Progress"
+            ).length,
+            Closed: cases.filter((c) => c.status === "Closed").length,
+          };
+        }
+
+        // Calculate monthly stats from actual case data if analytics is empty
+        let monthlyStats = analytics.monthlyStats;
+
+        if (
+          !monthlyStats ||
+          monthlyStats.length === 0 ||
+          monthlyStats.every(
+            (stat) => stat.activeCases === 0 && stat.pendingCases === 0
+          )
+        ) {
+          const currentYear = new Date().getFullYear();
+          monthlyStats = Array(12)
+            .fill(0)
+            .map((_, index) => {
+              const monthStart = new Date(currentYear, index, 1);
+              const monthEnd = new Date(currentYear, index + 1, 0, 23, 59, 59);
+
+              const monthCases = cases.filter((caseItem) => {
+                const caseDate = new Date(caseItem.createdAt);
+                return caseDate >= monthStart && caseDate <= monthEnd;
+              });
+
+              return {
+                month: index,
+                totalCases: monthCases.length,
+                activeCases: monthCases.filter(
+                  (c) =>
+                    c.status === "Open" ||
+                    c.status === "In-progress" ||
+                    c.status === "In Progress"
+                ).length,
+                pendingCases: monthCases.filter((c) => c.status === "Open")
+                  .length,
+              };
+            });
+        }
+
+        // Set chart data with calculated or analytics data
         setChartData({
-          monthlyStats: analytics.monthlyStats,
-          statusDistribution: analytics.statusDistribution,
+          monthlyStats,
+          statusDistribution,
         });
 
         // Calculate stats
         const totalCases = analytics.totalCases || cases.length;
         const activeUsers = analytics.totalUsers || users.length;
         const pendingCases = cases.filter(
-          (c) => c.status === "Open" || c.status === "In-progress"
+          (c) =>
+            c.status === "Open" ||
+            c.status === "In-progress" ||
+            c.status === "In Progress"
         ).length;
         const urgentCases =
           analytics.urgentCases ||
@@ -306,11 +365,17 @@ const AdminHome = () => {
               : "TBD",
             time: hearing.time || "TBD",
             location: hearing.court?.name || "TBD",
-            judge:
-              hearing.judge?.username ||
-              (hearing.judge?.firstName && hearing.judge?.lastName)
-                ? `${hearing.judge.firstName} ${hearing.judge.lastName}`.trim()
-                : "TBD",
+            judge: (() => {
+              if (hearing.judge?.username) {
+                return hearing.judge.username;
+              }
+              if (hearing.judge?.firstName || hearing.judge?.lastName) {
+                return `${hearing.judge.firstName || ""} ${
+                  hearing.judge.lastName || ""
+                }`.trim();
+              }
+              return "TBD";
+            })(),
           }));
 
         setUpcomingHearings(upcomingHearingsData);
@@ -513,11 +578,22 @@ const AdminHome = () => {
               </p>
             </div>
             <div className="h-64">
-              {chartData.monthlyStats.length > 0 ? (
+              {chartData.monthlyStats.length > 0 &&
+              chartData.monthlyStats.some(
+                (stat) => stat.activeCases > 0 || stat.pendingCases > 0
+              ) ? (
                 <Bar data={caseChartData} options={chartOptions} />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">Loading chart data...</p>
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="bg-gray-100 rounded-full p-4 mb-3">
+                    <FaChartBar className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">
+                    No case data available
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Charts will appear when cases are filed
+                  </p>
                 </div>
               )}
             </div>
@@ -534,11 +610,22 @@ const AdminHome = () => {
               </p>
             </div>
             <div className="h-64">
-              {Object.keys(chartData.statusDistribution).length > 0 ? (
+              {Object.keys(chartData.statusDistribution).length > 0 &&
+              Object.values(chartData.statusDistribution).some(
+                (value) => value > 0
+              ) ? (
                 <Doughnut data={pieChartData} options={pieChartOptions} />
               ) : (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">Loading chart data...</p>
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="bg-gray-100 rounded-full p-4 mb-3">
+                    <FaChartPie className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-500 font-medium">
+                    No status data available
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Status distribution will appear when cases are filed
+                  </p>
                 </div>
               )}
             </div>

@@ -200,6 +200,8 @@ const AdminSettings = () => {
         formData
       );
 
+      console.log("Profile picture upload response:", response.data);
+
       // Update profile picture preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -212,10 +214,13 @@ const AdminSettings = () => {
         ...storedUser,
         profilePicture: response.data.user.profilePicture,
       };
+      console.log("Updating localStorage with user:", updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       // Dispatch custom event to update navbar in real-time
       window.dispatchEvent(new CustomEvent("userUpdated"));
+      // Also dispatch event to refresh admin users list
+      window.dispatchEvent(new CustomEvent("profilePictureUpdated"));
 
       showSuccess("Profile picture updated successfully!");
     } catch (error) {

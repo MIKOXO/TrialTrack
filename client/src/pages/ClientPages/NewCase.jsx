@@ -13,7 +13,6 @@ const NewCase = () => {
     location.state?.formData || {
       title: "",
       caseType: "",
-      court: "",
       reportDate: "",
       description: "",
       plaintiff: {
@@ -42,14 +41,6 @@ const NewCase = () => {
     { value: "other", label: "Other" },
   ];
 
-  const courts = [
-    { value: "", label: "Select Court" },
-    { value: "district", label: "District Court" },
-    { value: "high", label: "High Court" },
-    { value: "supreme", label: "Supreme Court" },
-    { value: "family", label: "Family Court" },
-    { value: "traffic", label: "Traffic Court" },
-  ];
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
 
@@ -96,10 +87,6 @@ const NewCase = () => {
 
     if (!formData.caseType) {
       newErrors.caseType = "Please select a case type";
-    }
-
-    if (!formData.court) {
-      newErrors.court = "Please select a court";
     }
 
     if (!formData.reportDate) {
@@ -253,54 +240,28 @@ const NewCase = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
-              <div className="mb-4 md:mb-0">
-                <select
-                  style={{ appearance: "none" }}
-                  id="caseType"
-                  name="caseType"
-                  value={formData.caseType}
-                  onChange={handleChange}
-                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
-                    errors.caseType
-                      ? " border-red-500 focus:ring-red-500"
-                      : "text-gray-500 border-gray-300 focus:ring-tertiary"
-                  }`}
-                >
-                  {caseTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.caseType && (
-                  <p className="text-red-500 text-sm mt-1">{errors.caseType}</p>
-                )}
-              </div>
-
-              <div>
-                <select
-                  style={{ appearance: "none" }}
-                  id="court"
-                  name="court"
-                  value={formData.court}
-                  onChange={handleChange}
-                  className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
-                    errors.court
-                      ? "border-red-500 focus:ring-red-500"
-                      : "text-gray-500 border-gray-300 focus:ring-tertiary"
-                  }`}
-                >
-                  {courts.map((court) => (
-                    <option key={court.value} value={court.value}>
-                      {court.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.court && (
-                  <p className="text-red-500 text-sm mt-1">{errors.court}</p>
-                )}
-              </div>
+            <div className="mb-4 md:mb-6">
+              <select
+                style={{ appearance: "none" }}
+                id="caseType"
+                name="caseType"
+                value={formData.caseType}
+                onChange={handleChange}
+                className={`peer w-full border border-gray-300 rounded-lg px-4 md:px-6 pt-5 pb-2 text-sm md:text-base focus:border-transparent focus:outline-none focus:ring-1 focus:ring-tertiary ${
+                  errors.caseType
+                    ? " border-red-500 focus:ring-red-500"
+                    : "text-gray-500 border-gray-300 focus:ring-tertiary"
+                }`}
+              >
+                {caseTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              {errors.caseType && (
+                <p className="text-red-500 text-sm mt-1">{errors.caseType}</p>
+              )}
             </div>
 
             <div className="mb-4 md:mb-6">
