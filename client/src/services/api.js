@@ -81,6 +81,7 @@ export const hearingsAPI = {
 export const courtsAPI = {
   getCourts: () => api.get("/court/courts"),
   createCourt: (courtData) => api.post("/court/create", courtData),
+  deleteCourt: (id) => api.delete(`/court/${id}`),
 };
 
 // Reports API

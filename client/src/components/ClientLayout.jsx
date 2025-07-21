@@ -104,7 +104,12 @@ const ClientLayout = ({ children }) => {
             {/* Profile Avatar */}
             <div className="relative">
               <div className="flex items-center">
-                <ProfileAvatar user={user} size="md" showName={true} />
+                <ProfileAvatar
+                  key={`${user?.id}-${userUpdateTrigger}`}
+                  user={user}
+                  size="md"
+                  showName={true}
+                />
               </div>
             </div>
           </div>

@@ -121,11 +121,14 @@ const AdminCalendar = () => {
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showAddCourtroomModal, setShowAddCourtroomModal] = useState(false);
   const [showEditCourtroomModal, setShowEditCourtroomModal] = useState(false);
+  const [showDeleteCourtroomModal, setShowDeleteCourtroomModal] =
+    useState(false);
   const [selectedCourtroom, setSelectedCourtroom] = useState(null);
 
   // Loading states
   const [addEventLoading, setAddEventLoading] = useState(false);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [deleteCourtroomLoading, setDeleteCourtroomLoading] = useState(false);
 
   // Time checking states
   const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
@@ -175,7 +178,7 @@ const AdminCalendar = () => {
       setLoadingTimeSlots(true);
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Authentication token not found. Please sign in again.");
+        setError("Authentication token not found. Please sign in again.");
         return;
       }
 
@@ -266,7 +269,7 @@ const AdminCalendar = () => {
       !newEvent.startTime ||
       !selectedCourtId
     ) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -287,7 +290,7 @@ const AdminCalendar = () => {
       );
 
       if (conflictingEvent) {
-        alert(
+        setError(
           `Time conflict detected! ${selectedCourtroom?.name} is already booked at ${newEvent.startTime} on ${newEvent.date}`
         );
         return;
@@ -318,10 +321,14 @@ const AdminCalendar = () => {
       setSelectedCourtId("");
       setAvailableTimeSlots([]);
 
-      alert("Hearing scheduled successfully!");
+      // Clear any previous errors
+      setError(null);
     } catch (error) {
       console.error("Error scheduling hearing:", error);
-      alert("Failed to schedule hearing. Please try again.");
+      setError(
+        error.response?.data?.error ||
+          "Failed to schedule hearing. Please try again."
+      );
     } finally {
       setAddEventLoading(false);
     }
@@ -330,7 +337,7 @@ const AdminCalendar = () => {
   // Handle adding a new courtroom
   const handleAddCourtroom = async () => {
     if (!newCourtroom.name || !newCourtroom.location) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -353,17 +360,21 @@ const AdminCalendar = () => {
         capacity: 50,
       });
 
-      alert("Courtroom created successfully!");
+      // Clear any previous errors
+      setError(null);
     } catch (error) {
       console.error("Error creating courtroom:", error);
-      alert("Failed to create courtroom. Please try again.");
+      setError(
+        error.response?.data?.error ||
+          "Failed to create courtroom. Please try again."
+      );
     }
   };
 
   // Handle editing a courtroom
   const handleEditCourtroom = () => {
     if (!selectedCourtroom.name || !selectedCourtroom.location) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -376,23 +387,52 @@ const AdminCalendar = () => {
     setSelectedCourtroom(null);
   };
 
-  // Handle deleting a courtroom
-  const handleDeleteCourtroom = (id) => {
-    if (window.confirm("Are you sure you want to delete this courtroom?")) {
-      // Check if courtroom is in use by any events
-      const isInUse = events.some((event) => {
-        const courtroom = courtrooms.find((c) => c.id === id);
-        return event.courtroom === courtroom.name;
-      });
+  // Handle deleting a courtroom - open modal
+  const handleDeleteCourtroom = (courtroom) => {
+    setSelectedCourtroom(courtroom);
+    setShowDeleteCourtroomModal(true);
+  };
 
-      if (isInUse) {
-        alert(
-          "Cannot delete courtroom as it is being used by scheduled events"
-        );
-        return;
-      }
+  // Confirm delete courtroom
+  const confirmDeleteCourtroom = async () => {
+    if (!selectedCourtroom) return;
 
-      setCourtrooms(courtrooms.filter((courtroom) => courtroom.id !== id));
+    // Check if courtroom is in use by any events
+    const isInUse = events.some((event) => {
+      return event.courtroom === selectedCourtroom.name;
+    });
+
+    if (isInUse) {
+      setError(
+        "Cannot delete courtroom as it is being used by scheduled events"
+      );
+      setShowDeleteCourtroomModal(false);
+      return;
+    }
+
+    try {
+      setDeleteCourtroomLoading(true);
+
+      // Call API to delete courtroom from database
+      await courtsAPI.deleteCourt(selectedCourtroom.id);
+
+      // Remove from local state only after successful deletion
+      setCourtrooms(
+        courtrooms.filter((courtroom) => courtroom.id !== selectedCourtroom.id)
+      );
+
+      // Close modal and reset state
+      setShowDeleteCourtroomModal(false);
+      setSelectedCourtroom(null);
+      setError(null);
+    } catch (error) {
+      console.error("Error deleting courtroom:", error);
+      setError(
+        error.response?.data?.error ||
+          "Failed to delete courtroom. Please try again."
+      );
+    } finally {
+      setDeleteCourtroomLoading(false);
     }
   };
 
@@ -686,7 +726,7 @@ const AdminCalendar = () => {
                             <FaEdit />
                           </button>
                           <button
-                            onClick={() => handleDeleteCourtroom(courtroom.id)}
+                            onClick={() => handleDeleteCourtroom(courtroom)}
                             className="text-red-600 hover:text-red-800"
                             title="Delete Courtroom"
                           >
@@ -1017,6 +1057,64 @@ const AdminCalendar = () => {
                   className="px-4 py-2 rounded-md bg-tertiary text-white hover:bg-green-700 ease-in-out duration-300"
                 >
                   Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Courtroom Confirmation Modal */}
+        {showDeleteCourtroomModal && selectedCourtroom && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-semibold mb-4 text-red-600">
+                Delete Courtroom
+              </h2>
+
+              <div className="mb-6">
+                <p className="text-gray-700 mb-2">
+                  Are you sure you want to delete this courtroom?
+                </p>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="font-medium text-gray-900">
+                    {selectedCourtroom.name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Location: {selectedCourtroom.location}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Capacity: {selectedCourtroom.capacity} people
+                  </p>
+                </div>
+                <p className="text-sm text-red-600 mt-3">
+                  This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteCourtroomModal(false);
+                    setSelectedCourtroom(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  disabled={deleteCourtroomLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteCourtroom}
+                  disabled={deleteCourtroomLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {deleteCourtroomLoading && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  )}
+                  <span>
+                    {deleteCourtroomLoading
+                      ? "Deleting..."
+                      : "Delete Courtroom"}
+                  </span>
                 </button>
               </div>
             </div>

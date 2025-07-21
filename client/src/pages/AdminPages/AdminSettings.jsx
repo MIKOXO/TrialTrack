@@ -200,7 +200,12 @@ const AdminSettings = () => {
         formData
       );
 
-      console.log("Profile picture upload response:", response.data);
+      console.log("=== PROFILE PICTURE UPLOAD DEBUG ===");
+      console.log("Full response:", response);
+      console.log("Response data:", response.data);
+      console.log("User data:", response.data.user);
+      console.log("Profile picture data:", response.data.user.profilePicture);
+      console.log("Current stored user:", storedUser);
 
       // Update profile picture preview
       const reader = new FileReader();
@@ -209,12 +214,16 @@ const AdminSettings = () => {
       };
       reader.readAsDataURL(file);
 
-      // Update localStorage with new profile picture
+      // Update localStorage with the exact response from backend
       const updatedUser = {
         ...storedUser,
         profilePicture: response.data.user.profilePicture,
       };
       console.log("Updating localStorage with user:", updatedUser);
+      console.log(
+        "Profile picture in updated user:",
+        updatedUser.profilePicture
+      );
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       // Dispatch custom event to update navbar in real-time

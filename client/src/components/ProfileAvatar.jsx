@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaUser } from "react-icons/fa";
 
 const ProfileAvatar = ({
@@ -9,6 +9,11 @@ const ProfileAvatar = ({
   onClick = null,
 }) => {
   const [imageError, setImageError] = useState(false);
+
+  // Reset image error when user data changes
+  useEffect(() => {
+    setImageError(false);
+  }, [user?.profilePicture]);
 
   // Size configurations
   const sizeClasses = {
@@ -42,26 +47,69 @@ const ProfileAvatar = ({
 
   // Get profile picture URL
   const getProfilePictureUrl = () => {
-    if (!user?.profilePicture || imageError) return null;
+    console.log("=== PROFILE AVATAR DEBUG ===");
+    console.log("User data:", user);
+    console.log("Profile picture data:", user?.profilePicture);
+    console.log("Image error state:", imageError);
+
+    if (!user?.profilePicture || imageError) {
+      console.log("No profile picture or image error, returning null");
+      return null;
+    }
+
+    // Add cache busting timestamp to prevent browser caching
+    const timestamp = Date.now();
 
     // Handle new profile picture structure (object with url property)
     if (typeof user.profilePicture === "object" && user.profilePicture.url) {
-      // If it's already a full URL, use it as is
+      console.log("Found object with url:", user.profilePicture.url);
+      // If it's already a full URL, use it as is with cache busting
       if (user.profilePicture.url.startsWith("http")) {
-        return user.profilePicture.url;
+        const separator = user.profilePicture.url.includes("?") ? "&" : "?";
+        const finalUrl = `${user.profilePicture.url}${separator}t=${timestamp}`;
+        console.log("Using full URL:", finalUrl);
+        return finalUrl;
       }
-      // Otherwise, construct the full URL
-      return `http://localhost:3001${user.profilePicture.url}`;
+      // Otherwise, construct the full URL with cache busting
+      const baseUrl = `http://localhost:3001${user.profilePicture.url}`;
+      const separator = user.profilePicture.url.includes("?") ? "&" : "?";
+      const finalUrl = `${baseUrl}${separator}t=${timestamp}`;
+      console.log("Constructed URL:", finalUrl);
+      return finalUrl;
     }
 
     // Handle legacy profile picture structure (string path)
     if (typeof user.profilePicture === "string") {
-      // If it's already a full URL, use it as is
+      console.log("Found string profile picture:", user.profilePicture);
+      // If it's already a full URL, use it as is with cache busting
       if (user.profilePicture.startsWith("http")) {
-        return user.profilePicture;
+        const separator = user.profilePicture.includes("?") ? "&" : "?";
+        const finalUrl = `${user.profilePicture}${separator}t=${timestamp}`;
+        console.log("Using string URL:", finalUrl);
+        return finalUrl;
       }
-      // Otherwise, construct the URL from the backend
-      return `http://localhost:3001/uploads/${user.profilePicture}`;
+      // Otherwise, construct the URL from the backend with cache busting
+      const finalUrl = `http://localhost:3001/uploads/${user.profilePicture}?t=${timestamp}`;
+      console.log("Constructed legacy URL:", finalUrl);
+      return finalUrl;
+    }
+
+    // Fallback: if user has an ID and profilePicture exists but doesn't match above patterns
+    if (user?.profilePicture && (user?.id || user?._id)) {
+      const userId = user.id || user._id;
+      const fallbackUrl = `http://localhost:3001/api/auth/profile-picture/${userId}?t=${timestamp}`;
+      console.log("Using fallback URL:", fallbackUrl);
+      return fallbackUrl;
+    }
+
+    console.log("No profile picture URL could be determined");
+
+    // Final fallback: try to construct URL from user ID if available
+    if (user?.id || user?._id) {
+      const userId = user.id || user._id;
+      const finalFallbackUrl = `http://localhost:3001/api/auth/profile-picture/${userId}?t=${timestamp}`;
+      console.log("Final fallback URL:", finalFallbackUrl);
+      return finalFallbackUrl;
     }
 
     return null;
