@@ -14,6 +14,11 @@ import analyticsRoutes from "./routes/analyticsRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import connectDB from "./config/db.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const port = process.env.PORT || 3001;
 
 dotenv.config();
@@ -47,6 +52,17 @@ app.use("/api/report", reportRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/comments", commentRoutes);
+
+// Serve static files from React build (for production)
+if (process.env.NODE_ENV === "production") {
+  // Serve static files from client build
+  app.use(express.static(path.join(__dirname, "../client/dist")));
+
+  // Handle React routing, return all requests to React app
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../client/dist", "index.html"));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
